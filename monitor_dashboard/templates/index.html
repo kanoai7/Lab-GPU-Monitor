@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab GPU Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <span class="lab-code">LAB</span>
+            <span class="lab-name">GPU CLUSTER</span>
+        </div>
+        <div id="last-updated">等待同步...</div>
+    </header>
+
+    <main id="dashboard-container">
+        </main>
+
+    <footer>
+        Lab Server Monitor v2.0
+    </footer>
+
+</body>
+</html>

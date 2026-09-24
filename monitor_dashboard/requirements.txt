@@ -1,0 +1,3 @@
+# Web 仪表盘依赖 / Web dashboard dependencies
+flask>=2.0
+requests>=2.25

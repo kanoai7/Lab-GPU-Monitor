@@ -1,0 +1,4 @@
+# 监控 Agent 依赖 / Monitoring agent dependencies
+flask>=2.0
+psutil>=5.9
+pynvml>=11.0        # 需要 NVIDIA 驱动 / requires NVIDIA driver

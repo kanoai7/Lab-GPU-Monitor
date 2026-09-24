@@ -1,0 +1,367 @@
+/* 文件名 / File: ~/code/monitor_dashboard/static/style.css (v4 - AI 实验室专业版 / AI lab professional edition) */
+
+/* --- 1. CSS 变量 (高级调色板) / CSS variables (advanced palette) --- */
+:root {
+    /* 背景色 (参考 GitHub Dark 极客灰) / Background colors (inspired by GitHub Dark geeky gray) */
+    --bg-base: #0d1117;
+    --bg-card: #161b22;
+    --bg-card-hover: #1c2128;
+    --bg-surface: #21262d;
+    
+    /* 文本颜色 / Text colors */
+    --text-main: #c9d1d9;
+    --text-muted: #8b949e;
+    --text-title: #ffffff;
+    
+    /* 边框与线条 / Borders and lines */
+    --border-subtle: #30363d;
+    
+    /* 状态颜色 (低饱和度，不刺眼) / Status colors (low saturation, easy on the eyes) */
+    --color-online: #238636;
+    --color-offline: #da3633;
+    --color-normal: #2f81f7; /* 科技蓝 / Tech blue */
+    --color-warn: #d29922;
+    --color-danger: #f85149;
+    
+    /* 字体栈 / Font stack */
+    --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: 'JetBrains Mono', Consolas, monospace;
+}
+
+/* --- 2. 全局基础 / Global base --- */
+body {
+    font-family: var(--font-ui);
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    margin: 0;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.lab-code {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--text-title);
+    letter-spacing: 1px;
+}
+
+.lab-name {
+    font-size: 0.9em;
+    color: var(--color-normal);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+#last-updated {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+/* --- 3. 网格与响应式布局 / Grid and responsive layout --- */
+#dashboard-container {
+    display: grid;
+    /* 默认 PC 端：卡片最小 400px，自适应 / Default desktop: cards min 400px, auto-fit */
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 24px;
+}
+
+/* 移动端适配 (核心优化) / Mobile adaptation (core optimization) */
+@media (max-width: 768px) {
+    body {
+        padding: 12px; /* 手机端减小外边距 / Reduce outer padding on phones */
+    }
+    #dashboard-container {
+        grid-template-columns: 1fr; /* 强制单列 / Force a single column */
+        gap: 16px;
+    }
+    .metrics-grid {
+        grid-template-columns: 1fr !important; /* 手机端 CPU 和 RAM 上下排列 / Stack CPU and RAM vertically on phones */
+    }
+    .gpu-stats {
+        grid-template-columns: 1fr 1fr !important; /* 手机端换行显示 / Wrap onto multiple rows on phones */
+    }
+}
+
+/* --- 4. 服务器卡片 / Server cards --- */
+.server-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.server-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0, 0.4);
+    border-color: #484f58;
+}
+
+.server-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.server-name {
+    font-size: 1.4em;
+    font-weight: 600;
+    color: var(--text-title);
+    font-family: var(--font-mono); /* 服务器名用等宽更有极客感 / Monospace server name for a geeky feel */
+}
+
+/* 状态标签圆点设计 / Status badge dot design */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+.status-badge.online {
+    background-color: rgba(35, 134, 54, 0.15);
+    color: #3fb950;
+    border-color: rgba(63, 185, 80, 0.4);
+}
+.status-badge.offline {
+    background-color: rgba(218, 54, 51, 0.15);
+    color: #ff7b72;
+    border-color: rgba(255, 123, 114, 0.4);
+}
+
+.server-card.offline {
+    opacity: 0.5;
+    filter: grayscale(80%);
+}
+
+/* --- 5. 指标与进度条 (数据密集型设计) / Metrics and progress bars (data-dense design) --- */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.metric-item {
+    background-color: var(--bg-surface);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.metric-item h4 {
+    margin: 0 0 8px 0;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--text-title);
+    font-family: var(--font-mono);
+    margin-bottom: 8px;
+}
+
+/* 进度条现代化 / Modernized progress bar */
+.progress-bar-container {
+    width: 100%;
+    background-color: #010409; /* 更深的底色 / Darker base color */
+    border-radius: 4px;
+    height: 8px; /* 更细，更精炼 / Thinner and more refined */
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* 移除文字，依靠外部数字显示，保持进度条纯粹 / Remove text, rely on external numbers, keep the bar clean */
+    color: transparent; 
+}
+
+.progress-bar-fill.normal { background-color: var(--color-normal); }
+.progress-bar-fill.warn { background-color: var(--color-warn); }
+.progress-bar-fill.danger { background-color: var(--color-danger); }
+
+/* --- 6. 折叠区块 / Collapsible sections --- */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 16px;
+}
+
+.section-header:hover h3 {
+    color: var(--text-title);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1em;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.toggle-icon {
+    font-size: 0.7em;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.section-content {
+    padding-bottom: 8px;
+    max-height: 2000px;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.3s ease;
+    opacity: 1;
+}
+
+.collapsible-section.collapsed .section-content {
+    max-height: 0;
+    padding-bottom: 0;
+    opacity: 0;
+}
+
+.collapsible-section.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+/* --- 7. 特定模块样式优化 / Style tweaks for specific modules --- */
+/* 网络 / Network */
+.network-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-family: var(--font-mono);
+}
+.network-item {
+    background-color: var(--bg-surface);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.network-item span { color: var(--text-muted); font-size: 0.8em; }
+.network-item strong { font-size: 0.9em; color: var(--text-main); }
+
+/* GPU / GPU */
+.gpu-item {
+    background-color: rgba(255,255,255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+.gpu-name {
+    font-weight: 600;
+    color: #a5d6ff; /* 浅蓝色突出 GPU 型号 / Light blue to highlight the GPU model */
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+.gpu-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.5fr;
+    gap: 8px;
+    font-size: 0.85em;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+.gpu-stats strong { color: var(--text-main); font-weight: normal; }
+
+.sub-text {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between; /* 让文字和数值两端对齐 */
+    font-family: var(--font-mono);
+}
+
+/* 进程列表 (终端风格) / Process list (terminal style) */
+.gpu-processes {
+    margin-top: 12px;
+    background-color: #010409; /* 终端黑 / Terminal black */
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 8px;
+}
+.process-title {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+.process-item {
+    border-left: 2px solid var(--color-normal);
+    padding-left: 8px;
+    margin-bottom: 10px;
+}
+.process-item:last-child { margin-bottom: 0; }
+.proc-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    margin-bottom: 4px;
+}
+.proc-pid { color: var(--text-muted); font-family: var(--font-mono); }
+.proc-mem { color: var(--color-warn); font-family: var(--font-mono); }
+.proc-cwd {
+    color: #7ee787; /* 终端绿 / Terminal green */
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+.proc-time { color: var(--text-muted); font-size: 0.75em; }
+
+/* 存储 / Storage */
+.disk-item {
+    margin-bottom: 12px;
+}
+.disk-name {
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--text-main);
+    margin-bottom: 4px;
+    font-family: var(--font-mono);
+}
+
+/* 页脚 / Footer */
+footer {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+}

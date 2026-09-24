@@ -1,0 +1,25 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- PyInstaller (CLI 打包产物) ---
+build/
+dist/
+*.spec
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Claude Code 本地设置 ---
+.claude/settings.local.json
+
+# --- 临时对话文件 (非项目内容) ---
+chat.txt
+Claude.md

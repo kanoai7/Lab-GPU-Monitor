@@ -1,0 +1,25 @@
+[Unit]
+Description=GPU Monitor Agent (agent.py)
+After=network.target
+
+[Service]
+# 使用您提供的用户名 / Use the provided username
+User=user
+Group=user
+
+# 使用您提供的代码路径 / Use the provided code path
+WorkingDirectory=/home/user/Code/monitor
+
+# 关键：使用您Conda环境中的Python可执行文件 / Key: use the Python executable from your Conda environment
+# 请将 ~/ 替换为实际用户主目录，例如 /home/user / Replace ~/ with the actual home dir, e.g. /home/user
+ExecStart=/home/user/Code/pip_env/monitor/bin/python /home/user/Code/monitor/monitor_serve/agent.py
+
+# 确保Conda环境的路径被正确加载 / Ensure the Conda environment path is loaded correctly
+Environment="PATH=/home/user/Code/pip_env/monitor/bin:/usr/bin:/bin"
+
+# 确保服务失败后自动重启 / Ensure the service auto-restarts after failure
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
