@@ -79,3 +79,6 @@ fi
 
 echo "== 完成 / Done =="
 echo "打开 / Open: http://<本机IP/this-host-ip>:$PORT  然后在设置页添加 Agent / then add agents in Settings"
+echo "提示 / Note: 前端已随仓库提交（static/dist），部署无需 node。仅当修改前端源码（frontend/）时才需："
+echo "  Frontend is pre-built and committed (static/dist); deployment needs no node. Only to change the frontend:"
+echo "    cd $HERE/frontend && npm install && npm run build"

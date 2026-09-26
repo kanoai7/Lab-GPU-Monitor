@@ -15,12 +15,16 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from flask import (Flask, jsonify, render_template, request, redirect,
-                   url_for, session, flash)
+                   url_for, session, flash, send_from_directory)
 from werkzeug.security import generate_password_hash, check_password_hash
+
+import history
 
 # --- 路径与配置 / Paths and configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.environ.get("DASHBOARD_CONFIG", os.path.join(BASE_DIR, "config.json"))
+DB_PATH = os.environ.get("DASHBOARD_DB", os.path.join(BASE_DIR, "history.db"))
+DIST_DIR = os.path.join(BASE_DIR, "static", "dist")  # 前端构建产物 / built SPA
 
 # 默认配置：agents 默认为空，避免任何"必须先改源码"的步骤，新手可在设置页添加。
 # Default config: agents empty by default so there's no "edit the source first" step; add them in the settings page.
@@ -35,6 +39,7 @@ DEFAULT_CONFIG = {
     "secret_key": "",
     "alerts": {"gpu_temp": 85, "gpu_mem_percent": 95, "disk_percent": 90},
     "display": {"show_processes": True, "show_offline": True, "compact": False},
+    "history": {"enabled": True, "retain_raw_hours": 6, "retain_rollup_days": 7},
 }
 
 config_lock = threading.Lock()
@@ -45,7 +50,7 @@ def _merge_defaults(cfg):
     """用默认值补齐缺失字段（浅合并 + 一层嵌套） / Fill missing fields from defaults (shallow + one nested level)."""
     merged = dict(DEFAULT_CONFIG)
     merged.update(cfg or {})
-    for k in ("alerts", "display"):
+    for k in ("alerts", "display", "history"):
         d = dict(DEFAULT_CONFIG[k])
         d.update(merged.get(k) or {})
         merged[k] = d
@@ -133,6 +138,15 @@ def update_data_loop():
         with data_lock:
             global_data_store = temp
 
+        # 写入历史（可关）/ record history (toggleable)
+        try:
+            with config_lock:
+                hist_on = bool((CONFIG.get("history") or {}).get("enabled", True))
+            if hist_on and temp:
+                history.record(temp)
+        except Exception as e:
+            print(f"[Warn] 历史写入异常 / history record error: {e}")
+
         elapsed = time.time() - start_time
         if elapsed < poll_interval:
             time.sleep(poll_interval - elapsed)
@@ -183,20 +197,29 @@ def logout():
     return redirect(url_for("login"))
 
 
+def _serve_spa():
+    """返回已构建的 SPA 壳；未构建时给出友好提示。 / Serve the built SPA shell; show a hint if not built yet."""
+    if os.path.exists(os.path.join(DIST_DIR, "index.html")):
+        return send_from_directory(DIST_DIR, "index.html")
+    return ("<h1>前端尚未构建 / Frontend not built</h1>"
+            "<p>请在 <code>monitor_dashboard/frontend</code> 执行 "
+            "<code>npm install &amp;&amp; npm run build</code> 生成 <code>static/dist</code>。<br>"
+            "Run <code>npm install &amp;&amp; npm run build</code> in "
+            "<code>monitor_dashboard/frontend</code> to produce <code>static/dist</code>.</p>"), 200
+
+
 @app.route("/")
 @login_required
 def get_index_page():
-    with config_lock:
-        title, theme = CONFIG.get("title"), CONFIG.get("theme")
-    return render_template("index.html", title=title, theme=theme, auth_on=auth_required())
+    return _serve_spa()
 
 
+# SPA 客户端路由：整页刷新 /settings、/host/xxx 也返回同一个壳。 / SPA client routes: full reload of these also returns the shell.
 @app.route("/settings")
+@app.route("/host/<path:_rest>")
 @login_required
-def get_settings_page():
-    with config_lock:
-        title, theme = CONFIG.get("title"), CONFIG.get("theme")
-    return render_template("settings.html", title=title, theme=theme, auth_on=auth_required())
+def spa_client_routes(_rest=None):
+    return _serve_spa()
 
 
 @app.route("/api/data")
@@ -233,7 +256,7 @@ def api_config():
     with config_lock:
         cfg = dict(CONFIG)
         # 只接受白名单字段，绝不接受 secret_key / password_hash 原文 / Whitelist only; never accept raw secret_key / password_hash
-        for key in ("title", "theme", "agents", "alerts", "display", "poll_interval", "port"):
+        for key in ("title", "theme", "agents", "alerts", "display", "history", "poll_interval", "port"):
             if key in body:
                 cfg[key] = body[key]
         if "auth_enabled" in body:
@@ -254,6 +277,20 @@ def api_config():
     return jsonify({"ok": True, "note": "端口修改需重启生效 / port change requires a restart"})
 
 
+@app.route("/api/history")
+@login_required
+def api_history():
+    """返回某主机的时序历史（供 ECharts 多折线）。 / Time-series history for one host (for ECharts multi-line)."""
+    host = request.args.get("host", "")
+    rng = request.args.get("range", "6h")
+    if not host:
+        return jsonify({"error": "missing host"}), 400
+    try:
+        return jsonify(history.query(host, rng))
+    except Exception as e:
+        return jsonify({"error": f"history query failed: {e}"}), 500
+
+
 @app.route("/api/health")
 def api_health():
     return jsonify({"ok": True})
@@ -263,6 +300,10 @@ if __name__ == "__main__":
     load_config()
     app.secret_key = CONFIG.get("secret_key") or secrets.token_hex(32)
     port = int(CONFIG.get("port", 48080))
+
+    # 历史存储：初始化 + 起降采样/裁剪线程 / History store: init + start downsample/prune thread
+    history.init(DB_PATH)
+    history.start_maintenance(lambda: (CONFIG.get("history") or {}))
 
     print("启动后台数据抓取线程... / Starting background data-fetch thread...")
     threading.Thread(target=update_data_loop, daemon=True).start()

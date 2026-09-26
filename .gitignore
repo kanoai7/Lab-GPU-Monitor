@@ -11,6 +11,20 @@ build/
 dist/
 *.spec
 
+# --- Dashboard 前端 / frontend (Vue+Vite) ---
+# node_modules 与源码工程内的临时产物不提交；但构建后的 static/dist 要提交（部署端免 node）。
+# Do not commit node_modules; DO commit the built static/dist so deployment needs no node.
+monitor_dashboard/frontend/node_modules/
+monitor_dashboard/frontend/dist/
+!monitor_dashboard/static/dist/
+!monitor_dashboard/static/dist/**
+
+# --- Dashboard 历史缓存 DB（运行时产物，勿提交）/ history cache DB (runtime, never commit) ---
+monitor_dashboard/history.db
+monitor_dashboard/history.db-wal
+monitor_dashboard/history.db-shm
+monitor_dashboard/dashboard_run.log
+
 # --- IDE / OS ---
 .vscode/
 .idea/
