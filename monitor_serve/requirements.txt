@@ -2,3 +2,4 @@
 flask>=2.0
 psutil>=5.9
 pynvml>=11.0        # 需要 NVIDIA 驱动 / requires NVIDIA driver
+waitress>=2.1       # 生产级 WSGI 服务器（未安装会自动回退到 Flask 开发服务器）/ production WSGI server (auto-falls back to Flask dev server if absent)

@@ -23,3 +23,7 @@ Thumbs.db
 # --- 临时对话文件 (非项目内容) ---
 chat.txt
 Claude.md
+
+# --- 运行时配置（含 secret_key / 密码哈希，切勿提交）/ Runtime config (contains secret_key / password hash, never commit) ---
+config.json
+**/config.json

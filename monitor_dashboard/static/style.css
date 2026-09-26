@@ -1,367 +1,161 @@
-/* 文件名 / File: ~/code/monitor_dashboard/static/style.css (v4 - AI 实验室专业版 / AI lab professional edition) */
+/* Lab GPU Monitor — dashboard SaaS style / 仪表盘 SaaS 风格
+   站点级明暗主题：通过 <html data-theme="dark|light"> 切换。 / Site-wide theme via <html data-theme>. */
 
-/* --- 1. CSS 变量 (高级调色板) / CSS variables (advanced palette) --- */
-:root {
-    /* 背景色 (参考 GitHub Dark 极客灰) / Background colors (inspired by GitHub Dark geeky gray) */
-    --bg-base: #0d1117;
-    --bg-card: #161b22;
-    --bg-card-hover: #1c2128;
-    --bg-surface: #21262d;
-    
-    /* 文本颜色 / Text colors */
-    --text-main: #c9d1d9;
-    --text-muted: #8b949e;
-    --text-title: #ffffff;
-    
-    /* 边框与线条 / Borders and lines */
-    --border-subtle: #30363d;
-    
-    /* 状态颜色 (低饱和度，不刺眼) / Status colors (low saturation, easy on the eyes) */
-    --color-online: #238636;
-    --color-offline: #da3633;
-    --color-normal: #2f81f7; /* 科技蓝 / Tech blue */
-    --color-warn: #d29922;
-    --color-danger: #f85149;
-    
-    /* 字体栈 / Font stack */
-    --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --font-mono: 'JetBrains Mono', Consolas, monospace;
+:root, html[data-theme="dark"] {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1c2230;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --border: #2a3038;
+    --accent: #3b82f6;
+    --accent-fg: #ffffff;
+    --ok: #3fb950;
+    --warn: #d29922;
+    --crit: #f85149;
+    --track: #21262d;
+    --shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+html[data-theme="light"] {
+    --bg: #f6f8fa;
+    --panel: #ffffff;
+    --panel-2: #f0f3f6;
+    --text: #1f2328;
+    --muted: #656d76;
+    --border: #d0d7de;
+    --accent: #2563eb;
+    --accent-fg: #ffffff;
+    --ok: #1a7f37;
+    --warn: #9a6700;
+    --crit: #cf222e;
+    --track: #eaeef2;
+    --shadow: 0 1px 3px rgba(140,149,159,.25);
 }
 
-/* --- 2. 全局基础 / Global base --- */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
 body {
-    font-family: var(--font-ui);
-    background-color: var(--bg-base);
-    color: var(--text-main);
-    margin: 0;
-    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
 }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.muted { color: var(--muted); font-size: 13px; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    border-bottom: 1px solid var(--border-subtle);
-    padding-bottom: 16px;
-    margin-bottom: 24px;
+/* --- Top bar / 顶栏 --- */
+.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
 }
-
-.brand {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.brand-mark { color: var(--accent); }
+.brand-name { letter-spacing: .2px; }
+.brand-lg { font-size: 20px; justify-content: center; margin-bottom: 8px; }
+.topnav { display: flex; align-items: center; gap: 16px; }
+.navlink { color: var(--muted); font-weight: 500; }
+.navlink:hover { color: var(--text); text-decoration: none; }
+.icon-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; cursor: pointer; padding: 4px 8px; font-size: 14px;
 }
-
-.lab-code {
-    font-size: 1.5em;
-    font-weight: 600;
-    color: var(--text-title);
-    letter-spacing: 1px;
+.icon-btn:hover { background: var(--panel-2); }
+.pill {
+    font-size: 12px; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 999px; padding: 3px 10px; background: var(--panel-2);
 }
+.pill.online { color: var(--ok); border-color: var(--ok); }
+.pill.stale { color: var(--warn); border-color: var(--warn); }
 
-.lab-name {
-    font-size: 0.9em;
-    color: var(--color-normal);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-#last-updated {
-    font-family: var(--font-mono);
-    font-size: 0.85em;
-    color: var(--text-muted);
-}
-
-/* --- 3. 网格与响应式布局 / Grid and responsive layout --- */
-#dashboard-container {
-    display: grid;
-    /* 默认 PC 端：卡片最小 400px，自适应 / Default desktop: cards min 400px, auto-fit */
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 24px;
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+.footer { text-align: center; color: var(--muted); padding: 24px; font-size: 12px; }
+.empty-hint {
+    text-align: center; color: var(--muted); padding: 48px 16px;
+    border: 1px dashed var(--border); border-radius: 12px; background: var(--panel);
 }
 
-/* 移动端适配 (核心优化) / Mobile adaptation (core optimization) */
-@media (max-width: 768px) {
-    body {
-        padding: 12px; /* 手机端减小外边距 / Reduce outer padding on phones */
-    }
-    #dashboard-container {
-        grid-template-columns: 1fr; /* 强制单列 / Force a single column */
-        gap: 16px;
-    }
-    .metrics-grid {
-        grid-template-columns: 1fr !important; /* 手机端 CPU 和 RAM 上下排列 / Stack CPU and RAM vertically on phones */
-    }
-    .gpu-stats {
-        grid-template-columns: 1fr 1fr !important; /* 手机端换行显示 / Wrap onto multiple rows on phones */
-    }
+/* --- Cards grid / 卡片网格 --- */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+.card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: var(--shadow); overflow: hidden;
 }
+.card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel-2);
+}
+.card-title { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card-body { padding: 14px 16px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.online { background: var(--ok); } .dot.offline { background: var(--crit); }
+.card.offline { opacity: .6; }
 
-/* --- 4. 服务器卡片 / Server cards --- */
-.server-card {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    padding: 20px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+/* --- Metric rows & bars / 指标行与进度条 --- */
+.metric { margin: 10px 0; }
+.metric-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.metric-top b { color: var(--text); font-weight: 600; }
+.bar { height: 7px; background: var(--track); border-radius: 999px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .4s ease; }
+.bar.ok > span { background: var(--ok); }
+.bar.warn > span { background: var(--warn); }
+.bar.crit > span { background: var(--crit); }
 
-.server-card:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0, 0.4);
-    border-color: #484f58;
-}
+.subhead { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 14px 0 6px; }
+.kv { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.kv b { color: var(--text); font-weight: 600; }
 
-.server-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
+/* --- GPU block / 单卡块 --- */
+.gpu { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 8px 0; background: var(--panel-2); }
+.gpu-name { font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.gpu-name .idx { color: var(--accent); }
+.badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+.badge.crit { color: var(--crit); border-color: var(--crit); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
 
-.server-name {
-    font-size: 1.4em;
-    font-weight: 600;
-    color: var(--text-title);
-    font-family: var(--font-mono); /* 服务器名用等宽更有极客感 / Monospace server name for a geeky feel */
-}
+.procs { margin-top: 8px; }
+.proc { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); padding: 3px 0; border-top: 1px dashed var(--border); }
+.proc b { color: var(--text); }
 
-/* 状态标签圆点设计 / Status badge dot design */
-.status-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.75em;
-    font-weight: 600;
-    text-transform: uppercase;
-    border: 1px solid transparent;
+/* --- Forms / settings / 表单与设置 --- */
+.settings h1 { font-size: 22px; margin: 4px 0 18px; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.panel h2 { font-size: 15px; margin: 0 0 12px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; }
+.row > span { color: var(--muted); }
+.check { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.field {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 14px; min-width: 220px;
+    font-family: inherit;
 }
-.status-badge.online {
-    background-color: rgba(35, 134, 54, 0.15);
-    color: #3fb950;
-    border-color: rgba(63, 185, 80, 0.4);
-}
-.status-badge.offline {
-    background-color: rgba(218, 54, 51, 0.15);
-    color: #ff7b72;
-    border-color: rgba(255, 123, 114, 0.4);
-}
+.field:focus { outline: none; border-color: var(--accent); }
+.agent-row { display: flex; gap: 8px; margin: 8px 0; align-items: center; }
+.agent-row .field { min-width: 0; flex: 1; }
+.agent-row .field.port { flex: 0 0 90px; }
 
-.server-card.offline {
-    opacity: 0.5;
-    filter: grayscale(80%);
-}
+.btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 14px; cursor: pointer; font-family: inherit; }
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn-primary:hover { opacity: .9; }
+.btn-del { color: var(--crit); border-color: transparent; background: transparent; padding: 6px 8px; }
+.save-bar { display: flex; align-items: center; justify-content: flex-end; gap: 14px; position: sticky; bottom: 0; padding: 14px 0; }
 
-/* --- 5. 指标与进度条 (数据密集型设计) / Metrics and progress bars (data-dense design) --- */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 20px;
-}
+/* --- Auth / centered / 登录页 --- */
+.center-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.auth-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 28px; width: 320px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+.auth-card .field { min-width: 0; width: 100%; }
+.alert-box { background: rgba(248,81,73,.12); border: 1px solid var(--crit); color: var(--crit); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
 
-.metric-item {
-    background-color: var(--bg-surface);
-    padding: 12px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border-subtle);
-}
-
-.metric-item h4 {
-    margin: 0 0 8px 0;
-    color: var(--text-muted);
-    font-size: 0.85em;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
-.metric-value {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: var(--text-title);
-    font-family: var(--font-mono);
-    margin-bottom: 8px;
-}
-
-/* 进度条现代化 / Modernized progress bar */
-.progress-bar-container {
-    width: 100%;
-    background-color: #010409; /* 更深的底色 / Darker base color */
-    border-radius: 4px;
-    height: 8px; /* 更细，更精炼 / Thinner and more refined */
-    overflow: hidden;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    /* 移除文字，依靠外部数字显示，保持进度条纯粹 / Remove text, rely on external numbers, keep the bar clean */
-    color: transparent; 
-}
-
-.progress-bar-fill.normal { background-color: var(--color-normal); }
-.progress-bar-fill.warn { background-color: var(--color-warn); }
-.progress-bar-fill.danger { background-color: var(--color-danger); }
-
-/* --- 6. 折叠区块 / Collapsible sections --- */
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    padding: 12px 0;
-    border-top: 1px solid var(--border-subtle);
-    margin-top: 16px;
-}
-
-.section-header:hover h3 {
-    color: var(--text-title);
-}
-
-.section-header h3 {
-    margin: 0;
-    color: var(--text-main);
-    font-size: 1em;
-    font-weight: 500;
-    transition: color 0.2s;
-}
-
-.toggle-icon {
-    font-size: 0.7em;
-    color: var(--text-muted);
-    transition: transform 0.3s ease;
-}
-
-.section-content {
-    padding-bottom: 8px;
-    max-height: 2000px;
-    overflow: hidden;
-    transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.3s ease;
-    opacity: 1;
-}
-
-.collapsible-section.collapsed .section-content {
-    max-height: 0;
-    padding-bottom: 0;
-    opacity: 0;
-}
-
-.collapsible-section.collapsed .toggle-icon {
-    transform: rotate(-90deg);
-}
-
-/* --- 7. 特定模块样式优化 / Style tweaks for specific modules --- */
-/* 网络 / Network */
-.network-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    font-family: var(--font-mono);
-}
-.network-item {
-    background-color: var(--bg-surface);
-    padding: 8px 12px;
-    border-radius: 6px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.network-item span { color: var(--text-muted); font-size: 0.8em; }
-.network-item strong { font-size: 0.9em; color: var(--text-main); }
-
-/* GPU / GPU */
-.gpu-item {
-    background-color: rgba(255,255,255, 0.02);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 12px;
-}
-.gpu-name {
-    font-weight: 600;
-    color: #a5d6ff; /* 浅蓝色突出 GPU 型号 / Light blue to highlight the GPU model */
-    margin-bottom: 10px;
-    font-size: 0.9em;
-}
-.gpu-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1.5fr;
-    gap: 8px;
-    font-size: 0.85em;
-    font-family: var(--font-mono);
-    color: var(--text-muted);
-    margin-bottom: 12px;
-}
-.gpu-stats strong { color: var(--text-main); font-weight: normal; }
-
-.sub-text {
-    font-size: 0.8em;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    display: flex;
-    justify-content: space-between; /* 让文字和数值两端对齐 */
-    font-family: var(--font-mono);
-}
-
-/* 进程列表 (终端风格) / Process list (terminal style) */
-.gpu-processes {
-    margin-top: 12px;
-    background-color: #010409; /* 终端黑 / Terminal black */
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    padding: 8px;
-}
-.process-title {
-    font-size: 0.75em;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-}
-.process-item {
-    border-left: 2px solid var(--color-normal);
-    padding-left: 8px;
-    margin-bottom: 10px;
-}
-.process-item:last-child { margin-bottom: 0; }
-.proc-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85em;
-    margin-bottom: 4px;
-}
-.proc-pid { color: var(--text-muted); font-family: var(--font-mono); }
-.proc-mem { color: var(--color-warn); font-family: var(--font-mono); }
-.proc-cwd {
-    color: #7ee787; /* 终端绿 / Terminal green */
-    font-family: var(--font-mono);
-    font-size: 0.8em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
-}
-.proc-time { color: var(--text-muted); font-size: 0.75em; }
-
-/* 存储 / Storage */
-.disk-item {
-    margin-bottom: 12px;
-}
-.disk-name {
-    font-size: 0.85em;
-    font-weight: 500;
-    color: var(--text-main);
-    margin-bottom: 4px;
-    font-family: var(--font-mono);
-}
-
-/* 页脚 / Footer */
-footer {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.85em;
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border-subtle);
-    font-family: var(--font-mono);
+@media (max-width: 560px) {
+    .container { padding: 14px; }
+    .cards { grid-template-columns: 1fr; }
+    .topnav { gap: 10px; }
+    .row { flex-direction: column; align-items: stretch; }
+    .field { min-width: 0; width: 100%; }
 }

@@ -1,3 +1,4 @@
 # Web 仪表盘依赖 / Web dashboard dependencies
-flask>=2.0
+flask>=2.0            # 含 werkzeug（用于密码哈希）/ ships werkzeug (used for password hashing)
 requests>=2.25
+waitress>=2.1         # 生产级 WSGI（未安装会自动回退到 Flask 开发服务器）/ production WSGI (auto-falls back to Flask dev server if absent)

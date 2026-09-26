@@ -10,11 +10,14 @@ import platform
 import time
 import datetime
 import os
-from threading import Lock
+from threading import Lock, Thread
 
 # --- 全局变量和锁 / Global variables and lock ---
 app = Flask(__name__)
-AGENT_PORT = 48210  # 监控 Agent 监听端口 / Metrics agent listening port
+# 端口可用环境变量覆盖，默认 48210 / Port overridable via env var, default 48210
+AGENT_PORT = int(os.environ.get("AGENT_PORT", "48210"))  # 监控 Agent 监听端口 / Metrics agent listening port
+# 后台采样间隔（秒），可用环境变量覆盖 / Background sampling interval (seconds), overridable via env var
+SAMPLE_INTERVAL = float(os.environ.get("AGENT_SAMPLE_INTERVAL", "2"))
 nvml_initialized = False
 nvml_lock = Lock() # pynvml 建议在多线程中使用锁 / pynvml recommends using a lock in multithreading
 
@@ -24,6 +27,12 @@ last_net_time = None
 net_lock = Lock()
 
 process_info_cache = {}
+
+# --- 后台采样快照 / Background sampling snapshot ---
+# 采样线程按固定间隔采集一次，/metrics 只返回最近一次快照。 / A sampler thread collects once per fixed interval; /metrics just returns the latest snapshot.
+# 好处：解耦"轮询频率"与"采集频率"，封顶 CPU 开销，并修复多个轮询端同时请求时网速/CPU 计算错乱的问题。 / Benefits: decouples poll frequency from sample frequency, caps CPU cost, and fixes net-speed/CPU corruption when multiple pollers hit the agent at once.
+latest_snapshot = {"status": "starting", "message": "Agent is warming up..."}
+snapshot_lock = Lock()
 
 # --- 辅助函数：格式化字节 / Helper functions: format bytes ---
 def bytes_to_gb(b):
@@ -63,6 +72,12 @@ def get_gpu_metrics():
                 except NVMLError:
                     power_draw, power_limit, power_percent = 0, 0, 0
                 
+                # 新增：风扇转速百分比（部分数据中心卡/被动散热卡不支持，需容错） / New: fan speed percent (unsupported on some datacenter/passively-cooled cards, guard required)
+                try:
+                    fan_speed = nvmlDeviceGetFanSpeed(handle)
+                except NVMLError:
+                    fan_speed = None
+
                 mem_info = nvmlDeviceGetMemoryInfo(handle)
                 mem_used = bytes_to_mb(mem_info.used)
                 mem_total = bytes_to_mb(mem_info.total)
@@ -87,24 +102,49 @@ def get_gpu_metrics():
 
                     # 缓存逻辑：如果 PID 不在缓存中，才执行耗时的 psutil 系统调用 / Cache logic: only run the costly psutil system call if the PID is not cached
                     if pid not in process_info_cache:
-                        proc_data = {"cwd": "unknown", "create_time": "unknown"}
+                        proc_data = {
+                            "cwd": "unknown",
+                            "create_time": "unknown",
+                            "username": "unknown",
+                            "name": "unknown",
+                            "cmdline": "",
+                        }
                         try:
                             ps_proc = psutil.Process(pid)
                             with ps_proc.oneshot(): # 进一步优化瞬间的读取性能 / Further optimize instantaneous read performance
                                 proc_data["cwd"] = ps_proc.cwd()
                                 create_time = datetime.datetime.fromtimestamp(ps_proc.create_time())
                                 proc_data["create_time"] = create_time.isoformat()
+                                # 新增：进程归属人 / 名称 / 命令行（均为 PID 生命周期内不变的信息，可安全缓存） / New: process owner / name / cmdline (all constant over a PID's lifetime, safe to cache)
+                                try:
+                                    proc_data["username"] = ps_proc.username()
+                                except Exception:
+                                    pass
+                                try:
+                                    proc_data["name"] = ps_proc.name()
+                                except Exception:
+                                    pass
+                                try:
+                                    cmdline = " ".join(ps_proc.cmdline())
+                                    # 截断过长命令行，避免 JSON 膨胀 / Truncate overly long cmdlines to avoid JSON bloat
+                                    proc_data["cmdline"] = cmdline[:512]
+                                except Exception:
+                                    pass
                         except (psutil.NoSuchProcess, psutil.AccessDenied):
                             pass
                         # 写入缓存 / Write to cache
                         process_info_cache[pid] = proc_data
 
                     # 从缓存和 NVML 构建返回数据 / Build return data from cache and NVML
+                    cached = process_info_cache[pid]
                     proc_info = {
                         "pid": pid,
                         "gpu_memory_usage_mb": bytes_to_mb(p.usedGpuMemory if p.usedGpuMemory else 0),
-                        "cwd": process_info_cache[pid]["cwd"],
-                        "create_time": process_info_cache[pid]["create_time"]
+                        "cwd": cached["cwd"],
+                        "create_time": cached["create_time"],
+                        "username": cached.get("username", "unknown"),
+                        "name": cached.get("name", "unknown"),
+                        "cmdline": cached.get("cmdline", ""),
                     }
                     processes.append(proc_info)
                 
@@ -112,7 +152,9 @@ def get_gpu_metrics():
                     'index': i,
                     'name': name.decode('utf-8') if isinstance(name, bytes) else name,
                     'temperature': temp,
+                    'fan_speed': fan_speed,
                     'utilization': util.gpu,
+                    'memory_utilization': util.memory,
                     'memory_used': mem_used,
                     'memory_total': mem_total,
                     'memory_percent': round(mem_percent, 1),
@@ -134,11 +176,25 @@ def get_gpu_metrics():
 # --- 2. CPU 指标 / CPU metrics ---
 def get_cpu_metrics():
     try:
-        return {
-            "percent": psutil.cpu_percent(interval=None), # 非阻塞 / Non-blocking
+        data = {
+            "percent": psutil.cpu_percent(interval=None), # 非阻塞：返回自上次调用以来的均值 / Non-blocking: mean since last call
+            "per_core": psutil.cpu_percent(interval=None, percpu=True), # 每核占用 / Per-core usage
             "physical_cores": psutil.cpu_count(logical=False),
-            "logical_cores": psutil.cpu_count(logical=True)
+            "logical_cores": psutil.cpu_count(logical=True),
         }
+        # 系统平均负载 1/5/15 分钟；Windows 上 psutil 为模拟值，需容错 / Load average 1/5/15 min; emulated on Windows by psutil, guard required
+        try:
+            la1, la5, la15 = psutil.getloadavg()
+            data["load_avg"] = [round(la1, 2), round(la5, 2), round(la15, 2)]
+        except (AttributeError, OSError):
+            data["load_avg"] = None
+        # CPU 频率（部分平台/虚拟机不提供，需容错） / CPU frequency (unavailable on some platforms/VMs, guard required)
+        try:
+            freq = psutil.cpu_freq()
+            data["freq_mhz"] = round(freq.current, 0) if freq else None
+        except Exception:
+            data["freq_mhz"] = None
+        return data
     except Exception as e:
         return {"error": str(e)}
 
@@ -146,11 +202,20 @@ def get_cpu_metrics():
 def get_memory_metrics():
     try:
         mem = psutil.virtual_memory()
-        return {
+        data = {
             "total_gb": bytes_to_gb(mem.total),
             "used_gb": bytes_to_gb(mem.used),
-            "percent": mem.percent
+            "percent": mem.percent,
         }
+        # 新增：交换分区 (swap) / New: swap partition
+        try:
+            swap = psutil.swap_memory()
+            data["swap_total_gb"] = bytes_to_gb(swap.total)
+            data["swap_used_gb"] = bytes_to_gb(swap.used)
+            data["swap_percent"] = swap.percent
+        except Exception:
+            pass
+        return data
     except Exception as e:
         return {"error": str(e)}
 
@@ -250,6 +315,7 @@ def get_system_metrics():
         uptime_str = str(datetime.timedelta(seconds=uptime_seconds))
         
         return {
+            "hostname": platform.node(), # 新增：主机名，便于识别是哪台 Agent / New: hostname, to identify which agent this is
             "platform": platform.platform(),
             "boot_time": datetime.datetime.fromtimestamp(boot_time).isoformat(),
             "uptime_str": uptime_str
@@ -258,14 +324,10 @@ def get_system_metrics():
         return {"error": str(e)}
 
 
-# --- 根端点: /metrics / Root endpoint: /metrics ---
-@app.route('/metrics')
-def get_all_metrics():
-    """
-    将所有指标汇总到一个JSON中
-    Aggregate all metrics into a single JSON.
-    """
-    all_data = {
+# --- 后台采样 / Background sampling ---
+def sample_all():
+    """采集一次全部指标 / Collect all metrics once."""
+    return {
         "timestamp": time.time(),
         "system": get_system_metrics(),
         "cpu": get_cpu_metrics(),
@@ -274,25 +336,54 @@ def get_all_metrics():
         "disks": get_disk_metrics(),
         "network": get_network_metrics()
     }
-    return jsonify(all_data)
+
+def sampler_loop():
+    """后台采样线程：按固定间隔刷新全局快照。 / Background sampler thread: refresh the global snapshot at a fixed interval."""
+    global latest_snapshot
+    while True:
+        try:
+            snap = sample_all()
+            with snapshot_lock:
+                latest_snapshot = snap
+        except Exception as e:
+            # 采样失败则保留上一次快照，不让线程退出。 / On failure keep the previous snapshot; don't let the thread die.
+            print(f"[sampler] 采样出错 / sampling error: {e}")
+        time.sleep(SAMPLE_INTERVAL)
+
+
+# --- 根端点: /metrics / Root endpoint: /metrics ---
+@app.route('/metrics')
+def get_all_metrics():
+    """
+    返回最近一次后台采样快照（不再每次请求现采，从而封顶 CPU 并保证网速/CPU 计算一致）。
+    Return the latest background-sampled snapshot (no per-request sampling: caps CPU and keeps net/CPU math consistent).
+    """
+    with snapshot_lock:
+        return jsonify(latest_snapshot)
 
 @app.route('/')
 def index():
-    return "GPU/System Metrics Agent (v2) is running. Visit /metrics to see data."
+    return "GPU/System Metrics Agent (v1) is running. Visit /metrics to see data."
 
 if __name__ == '__main__':
-    # 导入 datetime 仅用于系统指标 / Import datetime only for system metrics
-    import datetime
-
     try:
-        # 在启动时预热网络统计 / Warm up network stats at startup
+        # 预热网络与 CPU 统计，并做一次首采样，避免首个请求拿到占位数据 / Warm up net & CPU stats and take a first sample so early requests don't get placeholder data
         get_network_metrics()
+        get_cpu_metrics()
 
-        print(f"启动全功能监控 Agent，监听 0.0.0.0:{AGENT_PORT}... / Starting full monitor agent on 0.0.0.0:{AGENT_PORT}...")
-        # 建议使用生产级WSGI服务器, 如 Gunicorn 或 Waitress / Recommend a production-grade WSGI server such as Gunicorn or Waitress
-        # from waitress import serve
-        # serve(app, host='0.0.0.0', port=AGENT_PORT)
-        app.run(host='0.0.0.0', port=AGENT_PORT, debug=True)
+        # 启动后台采样线程（守护线程，随主进程退出） / Start background sampler thread (daemon, exits with the main process)
+        Thread(target=sampler_loop, daemon=True).start()
+
+        print(f"启动全功能监控 Agent，监听 0.0.0.0:{AGENT_PORT}（采样间隔 {SAMPLE_INTERVAL}s） / Starting full monitor agent on 0.0.0.0:{AGENT_PORT} (sample interval {SAMPLE_INTERVAL}s)...")
+
+        # 优先使用生产级 WSGI 服务器 waitress（跨平台、单进程多线程，契合 Agent 的跨请求全局状态）；未安装则回退 Flask 开发服务器。
+        # Prefer the production WSGI server waitress (cross-platform, single-process multi-threaded, fits the agent's cross-request global state); fall back to the Flask dev server if not installed.
+        try:
+            from waitress import serve
+            serve(app, host='0.0.0.0', port=AGENT_PORT, threads=8)
+        except ImportError:
+            print("未安装 waitress，回退到 Flask 开发服务器（生产环境请 pip install waitress） / waitress not installed, falling back to the Flask dev server (pip install waitress for production)")
+            app.run(host='0.0.0.0', port=AGENT_PORT)
 
     finally:
         # 如果服务关闭, 确保 NVML 也关闭 / If the service shuts down, ensure NVML is shut down too
