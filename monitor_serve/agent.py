@@ -26,6 +26,11 @@ last_net_stats = None
 last_net_time = None
 net_lock = Lock()
 
+# 用于计算磁盘读写速率（与网络同理，仅由单一采样线程独占更新） / Used to compute disk read/write rates (like network, updated solely by the single sampler thread)
+last_disk_io = None
+last_disk_time = None
+disk_lock = Lock()
+
 process_info_cache = {}
 
 # --- 后台采样快照 / Background sampling snapshot ---
@@ -40,6 +45,29 @@ def bytes_to_gb(b):
 
 def bytes_to_mb(b):
     return round(b / (1024**2), 2)
+
+# 降频原因位标志 -> 简短名称。不同 pynvml 版本常量名可能缺失，用 globals() 容错查找。 / Throttle-reason bit flags -> short names. Constant names vary across pynvml versions; look them up via globals() to tolerate absence.
+_THROTTLE_FLAGS = [
+    ("GpuIdle", "nvmlClocksThrottleReasonGpuIdle"),
+    ("AppClocksSetting", "nvmlClocksThrottleReasonApplicationsClocksSetting"),
+    ("SwPowerCap", "nvmlClocksThrottleReasonSwPowerCap"),
+    ("HwSlowdown", "nvmlClocksThrottleReasonHwSlowdown"),
+    ("SyncBoost", "nvmlClocksThrottleReasonSyncBoost"),
+    ("SwThermalSlowdown", "nvmlClocksThrottleReasonSwThermalSlowdown"),
+    ("HwThermalSlowdown", "nvmlClocksThrottleReasonHwThermalSlowdown"),
+    ("HwPowerBrakeSlowdown", "nvmlClocksThrottleReasonHwPowerBrakeSlowdown"),
+    ("DisplayClockSetting", "nvmlClocksThrottleReasonDisplayClockSetting"),
+]
+
+def _decode_throttle_reasons(bitmask):
+    """把降频原因位掩码解码为激活原因的名称列表。 / Decode the throttle-reason bitmask into a list of active reason names."""
+    names = []
+    g = globals()
+    for label, const_name in _THROTTLE_FLAGS:
+        flag = g.get(const_name)
+        if flag is not None and (bitmask & flag):
+            names.append(label)
+    return names
 
 # --- 1. GPU 指标 / GPU metrics ---
 def get_gpu_metrics():
@@ -78,6 +106,27 @@ def get_gpu_metrics():
                 except NVMLError:
                     fan_speed = None
 
+                # 新增：核心/显存频率（MHz）。不同代际/驱动可能不支持，容错。 / New: SM/memory clocks (MHz). Not supported on all gens/drivers, guarded.
+                try:
+                    sm_clock_mhz = nvmlDeviceGetClockInfo(handle, NVML_CLOCK_SM)
+                    mem_clock_mhz = nvmlDeviceGetClockInfo(handle, NVML_CLOCK_MEM)
+                except Exception:
+                    sm_clock_mhz, mem_clock_mhz = None, None
+
+                # 新增：降频原因。函数名/常量随 pynvml 版本变化，广义容错。 / New: throttle reasons. Function/const names vary by pynvml version, broadly guarded.
+                try:
+                    throttle_bits = nvmlDeviceGetCurrentClocksThrottleReasons(handle)
+                    throttle_reasons = _decode_throttle_reasons(throttle_bits)
+                except Exception:
+                    throttle_reasons = None
+
+                # 新增：易失性 ECC 不可纠正错误计数（消费级卡通常不支持，返回 None）。 / New: volatile uncorrected ECC error count (usually unsupported on consumer cards -> None).
+                try:
+                    ecc_uncorrected = nvmlDeviceGetTotalEccErrors(
+                        handle, NVML_MEMORY_ERROR_TYPE_UNCORRECTED, NVML_VOLATILE_ECC)
+                except Exception:
+                    ecc_uncorrected = None
+
                 mem_info = nvmlDeviceGetMemoryInfo(handle)
                 mem_used = bytes_to_mb(mem_info.used)
                 mem_total = bytes_to_mb(mem_info.total)
@@ -89,6 +138,14 @@ def get_gpu_metrics():
                 processes = []
                 nvml_procs = nvmlDeviceGetComputeRunningProcesses(handle) + \
                              nvmlDeviceGetGraphicsRunningProcesses(handle)
+
+                # 新增（可选）：每进程 GPU 利用率。较新驱动才支持，且需缓冲区内有采样，广义容错。 / New (optional): per-process GPU utilization. Newer drivers only, needs samples in buffer, broadly guarded.
+                proc_util_map = {}
+                try:
+                    for s in nvmlDeviceGetProcessUtilization(handle, 0):
+                        proc_util_map[s.pid] = {"sm": s.smUtil, "mem": s.memUtil}
+                except Exception:
+                    proc_util_map = {}
                 
                 for p in nvml_procs:
                     pid = p.pid
@@ -137,6 +194,7 @@ def get_gpu_metrics():
 
                     # 从缓存和 NVML 构建返回数据 / Build return data from cache and NVML
                     cached = process_info_cache[pid]
+                    putil = proc_util_map.get(pid)
                     proc_info = {
                         "pid": pid,
                         "gpu_memory_usage_mb": bytes_to_mb(p.usedGpuMemory if p.usedGpuMemory else 0),
@@ -145,6 +203,8 @@ def get_gpu_metrics():
                         "username": cached.get("username", "unknown"),
                         "name": cached.get("name", "unknown"),
                         "cmdline": cached.get("cmdline", ""),
+                        "gpu_util": putil["sm"] if putil else None,   # 每进程 SM 利用率 %（不支持时为 None） / Per-process SM utilization % (None if unsupported)
+                        "gpu_mem_util": putil["mem"] if putil else None,  # 每进程显存带宽利用率 % / Per-process memory-bandwidth utilization %
                     }
                     processes.append(proc_info)
                 
@@ -153,6 +213,10 @@ def get_gpu_metrics():
                     'name': name.decode('utf-8') if isinstance(name, bytes) else name,
                     'temperature': temp,
                     'fan_speed': fan_speed,
+                    'sm_clock_mhz': sm_clock_mhz,        # 核心频率 MHz / SM clock MHz
+                    'mem_clock_mhz': mem_clock_mhz,      # 显存频率 MHz / Memory clock MHz
+                    'throttle_reasons': throttle_reasons,  # 当前降频原因名称列表 / Active throttle reason names
+                    'ecc_uncorrected': ecc_uncorrected,  # 易失性不可纠正 ECC 错误数 / Volatile uncorrected ECC errors
                     'utilization': util.gpu,
                     'memory_utilization': util.memory,
                     'memory_used': mem_used,
@@ -205,6 +269,7 @@ def get_memory_metrics():
         data = {
             "total_gb": bytes_to_gb(mem.total),
             "used_gb": bytes_to_gb(mem.used),
+            "available_gb": bytes_to_gb(mem.available),  # 新增：真正可用（含可回收缓存）内存 / New: truly available (incl. reclaimable cache) memory
             "percent": mem.percent,
         }
         # 新增：交换分区 (swap) / New: swap partition
@@ -271,6 +336,40 @@ def get_disk_metrics():
     except Exception as e:
         return [{"error": str(e)}]
 
+# --- 4b. 磁盘 I/O 速率（瞬时读写，与网络同理靠差值计算） / Disk I/O rates (instantaneous read/write, delta-based like network) ---
+def get_disk_io_metrics():
+    global last_disk_io, last_disk_time
+    with disk_lock:
+        try:
+            current = psutil.disk_io_counters()
+        except Exception as e:
+            return {"error": str(e)}
+        if current is None:
+            return None
+
+        current_time = time.time()
+        read_mbps = 0
+        write_mbps = 0
+
+        if last_disk_io is not None:
+            time_delta = current_time - last_disk_time
+            if time_delta > 0:
+                read_delta = current.read_bytes - last_disk_io.read_bytes
+                write_delta = current.write_bytes - last_disk_io.write_bytes
+                # 速率 MB/s（字节量，非比特） / Rate in MB/s (bytes, not bits)
+                read_mbps = round((read_delta / time_delta) / (1024**2), 2)
+                write_mbps = round((write_delta / time_delta) / (1024**2), 2)
+
+        last_disk_io = current
+        last_disk_time = current_time
+
+        return {
+            "read_mbps": read_mbps,   # 瞬时读取速率 MB/s / Instantaneous read rate MB/s
+            "write_mbps": write_mbps,  # 瞬时写入速率 MB/s / Instantaneous write rate MB/s
+            "total_read_gb": bytes_to_gb(current.read_bytes),
+            "total_write_gb": bytes_to_gb(current.write_bytes),
+        }
+
 # --- 5. 网络 (Network) 指标 (计算瞬时速度) / Network metrics (compute instantaneous speed) ---
 def get_network_metrics():
     global last_net_stats, last_net_time
@@ -300,12 +399,43 @@ def get_network_metrics():
         last_net_stats = current_stats
         last_net_time = current_time
 
-        return {
+        result = {
             "send_mbps": send_mbps, # 瞬时发送速度 (Mb/s) / Instantaneous send speed (Mb/s)
             "recv_mbps": recv_mbps, # 瞬时接收速度 (Mb/s) / Instantaneous receive speed (Mb/s)
             "total_sent_gb": bytes_to_gb(current_stats.bytes_sent),
-            "total_recv_gb": bytes_to_gb(current_stats.bytes_recv)
+            "total_recv_gb": bytes_to_gb(current_stats.bytes_recv),
+            # 新增：累计错误/丢包计数（聚合），排查链路质量 / New: cumulative error/drop counts (aggregate) for link-quality triage
+            "errin": current_stats.errin,
+            "errout": current_stats.errout,
+            "dropin": current_stats.dropin,
+            "dropout": current_stats.dropout,
         }
+
+        # 新增：分网卡累计流量与错误/丢包（回环 lo 跳过） / New: per-NIC cumulative traffic and error/drop (skip loopback lo)
+        try:
+            per_nic = {}
+            for nic, s in psutil.net_io_counters(pernic=True).items():
+                if nic == "lo" or nic.startswith("Loopback"):
+                    continue
+                per_nic[nic] = {
+                    "sent_gb": bytes_to_gb(s.bytes_sent),
+                    "recv_gb": bytes_to_gb(s.bytes_recv),
+                    "errin": s.errin,
+                    "errout": s.errout,
+                    "dropin": s.dropin,
+                    "dropout": s.dropout,
+                }
+            result["per_nic"] = per_nic
+        except Exception:
+            result["per_nic"] = None
+
+        # 新增：网络连接数（部分平台需权限，容错） / New: network connection count (needs privileges on some platforms, guarded)
+        try:
+            result["connections"] = len(psutil.net_connections(kind="inet"))
+        except Exception:
+            result["connections"] = None
+
+        return result
 
 # --- 6. 系统 (System) 指标 / System metrics ---
 def get_system_metrics():
@@ -313,13 +443,33 @@ def get_system_metrics():
         boot_time = psutil.boot_time()
         uptime_seconds = int(time.time() - boot_time)
         uptime_str = str(datetime.timedelta(seconds=uptime_seconds))
-        
-        return {
+
+        data = {
             "hostname": platform.node(), # 新增：主机名，便于识别是哪台 Agent / New: hostname, to identify which agent this is
             "platform": platform.platform(),
             "boot_time": datetime.datetime.fromtimestamp(boot_time).isoformat(),
             "uptime_str": uptime_str
         }
+
+        # 新增：登录用户列表（去重用户名） / New: logged-in users (deduplicated usernames)
+        try:
+            data["users"] = sorted({u.name for u in psutil.users()})
+        except Exception:
+            data["users"] = None
+
+        # 新增：温度传感器（主要为 Linux；Windows/无传感器时为 None） / New: temperature sensors (mainly Linux; None on Windows / when unavailable)
+        try:
+            temps = {}
+            raw = getattr(psutil, "sensors_temperatures", lambda: {})()
+            for chip, entries in (raw or {}).items():
+                readings = [round(e.current, 1) for e in entries if e.current is not None]
+                if readings:
+                    temps[chip] = max(readings)  # 每个芯片取最高温，客户端按需展示 / Take the max temp per chip; client shows as needed
+            data["sensors_temp"] = temps or None
+        except Exception:
+            data["sensors_temp"] = None
+
+        return data
     except Exception as e:
         return {"error": str(e)}
 
@@ -334,6 +484,7 @@ def sample_all():
         "memory": get_memory_metrics(),
         "gpus": get_gpu_metrics(),
         "disks": get_disk_metrics(),
+        "disk_io": get_disk_io_metrics(),
         "network": get_network_metrics()
     }
 
@@ -363,13 +514,14 @@ def get_all_metrics():
 
 @app.route('/')
 def index():
-    return "GPU/System Metrics Agent (v1) is running. Visit /metrics to see data."
+    return "GPU/System Metrics Agent (v1.1) is running. Visit /metrics to see data."
 
 if __name__ == '__main__':
     try:
         # 预热网络与 CPU 统计，并做一次首采样，避免首个请求拿到占位数据 / Warm up net & CPU stats and take a first sample so early requests don't get placeholder data
         get_network_metrics()
         get_cpu_metrics()
+        get_disk_io_metrics()
 
         # 启动后台采样线程（守护线程，随主进程退出） / Start background sampler thread (daemon, exits with the main process)
         Thread(target=sampler_loop, daemon=True).start()
