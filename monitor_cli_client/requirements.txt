@@ -1,2 +1,3 @@
 # CLI 客户端依赖 / CLI client dependencies
 requests>=2.25
+textual>=0.60   # TUI 框架（含 rich） / TUI framework (bundles rich)
