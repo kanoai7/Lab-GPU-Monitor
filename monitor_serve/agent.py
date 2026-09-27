@@ -14,8 +14,8 @@ from threading import Lock, Thread
 
 # --- 全局变量和锁 / Global variables and lock ---
 app = Flask(__name__)
-# 端口可用环境变量覆盖，默认 48210 / Port overridable via env var, default 48210
-AGENT_PORT = int(os.environ.get("AGENT_PORT", "48210"))  # 监控 Agent 监听端口 / Metrics agent listening port
+# 端口可用环境变量覆盖，默认 9527（与实验室真机既有部署一致，服务配置无需改动）/ Port overridable via env var, default 9527 (matches the lab machines' existing deployment; no service-config change needed)
+AGENT_PORT = int(os.environ.get("AGENT_PORT", "9527"))  # 监控 Agent 监听端口 / Metrics agent listening port
 # 后台采样间隔（秒），可用环境变量覆盖 / Background sampling interval (seconds), overridable via env var
 SAMPLE_INTERVAL = float(os.environ.get("AGENT_SAMPLE_INTERVAL", "2"))
 nvml_initialized = False
@@ -68,6 +68,24 @@ def _decode_throttle_reasons(bitmask):
         if flag is not None and (bitmask & flag):
             names.append(label)
     return names
+
+# 兼容不同驱动/pynvml 版本的 GPU 进程查询：新驱动用无版本号函数即可，旧驱动（如 470）需 _v2。
+# Version-tolerant GPU process query: unversioned works on newer drivers; old drivers (e.g. 470) need _v2.
+# 内部容错，任一失败返回空列表，绝不让进程枚举拖垮整轮采样。 / Fully guarded — a failure yields [] and never aborts the sample.
+def _running_gpu_processes(handle):
+    g = globals()
+    procs = []
+    for base in ("nvmlDeviceGetComputeRunningProcesses", "nvmlDeviceGetGraphicsRunningProcesses"):
+        for suffix in ("", "_v3", "_v2"):   # 先试无版本号（既有真机已验证），失败再回退版本化。 / try unversioned first, then versioned fallbacks
+            fn = g.get(base + suffix)
+            if fn is None:
+                continue
+            try:
+                procs += list(fn(handle))
+                break
+            except Exception:
+                continue
+    return procs
 
 # --- 1. GPU 指标 / GPU metrics ---
 def get_gpu_metrics():
@@ -136,8 +154,7 @@ def get_gpu_metrics():
                 
                 # --- 新增/修改：带有缓存机制的进程信息获取 / New/Modified: process info retrieval with caching ---
                 processes = []
-                nvml_procs = nvmlDeviceGetComputeRunningProcesses(handle) + \
-                             nvmlDeviceGetGraphicsRunningProcesses(handle)
+                nvml_procs = _running_gpu_processes(handle)
 
                 # 新增（可选）：每进程 GPU 利用率。较新驱动才支持，且需缓冲区内有采样，广义容错。 / New (optional): per-process GPU utilization. Newer drivers only, needs samples in buffer, broadly guarded.
                 proc_util_map = {}

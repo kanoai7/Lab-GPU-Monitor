@@ -18,6 +18,26 @@ export function level(v, warn, crit) {
   return 'ok'
 }
 
+// 阈值对应的 CSS 颜色变量（用于环形/进度条/仪表盘着色）。 / Threshold -> CSS color var.
+export function lvlColor(v, warn, crit) {
+  const l = level(v, warn, crit)
+  return l === 'crit' ? 'var(--crit)' : l === 'warn' ? 'var(--warn)' : l === 'ok' ? 'var(--ok)' : 'var(--muted)'
+}
+
+// 读取 CSS 变量当前值（供 ECharts 等需要具体色值处使用）。 / Read a live CSS var value.
+export function cssVar(name, fallback = '') {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+    return v || fallback
+  } catch (e) { return fallback }
+}
+
+// 负载归一化为占核百分比（load1 / 逻辑核数 * 100）。 / Normalize load to % of cores.
+export function loadPct(load1, cores) {
+  if (typeof load1 !== 'number' || typeof cores !== 'number' || cores <= 0) return null
+  return (load1 / cores) * 100
+}
+
 // 空闲卡：利用率 <=5% 且至少一半显存空闲。 / Free GPU: util<=5% and >=half VRAM free.
 export function isFree(g) {
   const util = g.utilization
@@ -45,4 +65,9 @@ export function fmtBytes(gb) {
   if (typeof gb !== 'number' || !isFinite(gb)) return '—'
   if (gb >= 1024) return (gb / 1024).toFixed(2) + ' TB'
   return gb.toFixed(1) + ' GB'
+}
+
+// GPU 显存由 agent 以 MB 上报；显示时换算成 GB。 / GPU VRAM is reported in MB by the agent; show as GB.
+export function gbFromMb(mb, d = 1) {
+  return (typeof mb === 'number' && isFinite(mb)) ? (mb / 1024).toFixed(d) : '—'
 }

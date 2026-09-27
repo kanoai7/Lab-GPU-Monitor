@@ -13,33 +13,27 @@
     </div>
     <div class="card-body">
       <template v-if="online">
-        <div class="stats">
-          <div class="stat">
-            <span class="stat-k">CPU</span>
-            <span class="stat-v" :class="lvlTxt(cpuPct, 70, 90)">{{ int(cpuPct) }}%</span>
+        <!-- 主机级：CPU / 内存 / Host-level CPU + memory -->
+        <div class="metric">
+          <div class="metric-top">
+            <span>CPU<template v-if="loadCaption"> · {{ loadCaption }}</template></span>
+            <b class="mono">{{ int(cpuPct) }}%</b>
           </div>
-          <div class="stat">
-            <span class="stat-k">内存 / MEM</span>
-            <span class="stat-v" :class="lvlTxt(memPct, 80, 95)">{{ int(memPct) }}%</span>
+          <div class="bar" :class="lvl(cpuPct, 70, 90)"><span :style="{ width: pct(cpuPct) + '%' }"></span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-top">
+            <span>内存 / MEM</span>
+            <b class="mono">{{ num(mem.used_gb) }} / {{ num(mem.total_gb) }} GB · {{ int(mem.percent) }}%</b>
           </div>
-          <div class="stat">
-            <span class="stat-k">GPU 数</span>
-            <span class="stat-v">{{ gpus.length }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-k">最热 GPU</span>
-            <span class="stat-v" :class="lvlTxt(hotTemp, 75, 85)">{{ int(hotTemp) }}°C</span>
-          </div>
+          <div class="bar" :class="lvl(mem.percent, 80, 95)"><span :style="{ width: pct(mem.percent) + '%' }"></span></div>
         </div>
 
-        <div class="metric">
-          <div class="metric-top"><span>CPU 近况 / recent</span><b class="mono">{{ int(cpuPct) }}%</b></div>
-          <div class="spark">{{ spark(sparks.cpu) }}</div>
+        <!-- 每张 GPU 的完整信息（不做“最热”聚合）/ Full per-GPU info (no "hottest" aggregation). -->
+        <div v-if="gpus.length" class="gpu-list">
+          <GpuPanel v-for="g in gpus" :key="g.index" :g="g" :show-procs="false" compact />
         </div>
-        <div class="metric">
-          <div class="metric-top"><span>最热 GPU 利用率 / hottest util</span><b class="mono">{{ int(hotUtil) }}%</b></div>
-          <div class="spark">{{ spark(sparks.gpu) }}</div>
-        </div>
+        <div v-else class="inforow"><span class="lbl">GPU</span>未检测到 GPU / no GPU detected</div>
       </template>
       <template v-else>
         <div class="inforow"><span class="lbl">错误 / error</span>{{ entry.error || '无法连接 / unreachable' }}</div>
@@ -49,30 +43,39 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { int, spark, isFree, level } from '../util.js'
+import GpuPanel from './GpuPanel.vue'
+import { int, num, pct, level, isFree, loadPct } from '../util.js'
 
 const props = defineProps({
   name: String,
   entry: { type: Object, default: () => ({}) },
-  sparks: { type: Object, default: () => ({ cpu: [], gpu: [] }) },
 })
 const router = useRouter()
 
 const online = computed(() => props.entry.status === 'online')
 const d = computed(() => props.entry.data || {})
 const hostname = computed(() => (d.value.system || {}).hostname || '')
-const cpuPct = computed(() => (d.value.cpu || {}).percent)
-const memPct = computed(() => (d.value.memory || {}).percent)
+const cpu = computed(() => d.value.cpu || {})
+const cpuPct = computed(() => cpu.value.percent)
+// #1：负载归一化为占核百分比，标注核数，避免裸数字费解。 / Normalize load to % of cores + show core count.
+const loadCaption = computed(() => {
+  const la = cpu.value.load_avg
+  const cores = cpu.value.logical_cores
+  if (!Array.isArray(la) || !la.length) return ''
+  const p = loadPct(la[0], cores)
+  return p != null ? `负载 ${la[0]} (${Math.round(p)}% of ${cores}核)` : `负载 ${la[0]}`
+})
+const mem = computed(() => d.value.memory || {})
 const gpus = computed(() => d.value.gpus || [])
-const freeCount = computed(() => gpus.value.filter(isFree).length)
-const hotTemp = computed(() => gpus.value.reduce((m, g) => Math.max(m, g.temperature || 0), 0) || null)
-const hotUtil = computed(() => gpus.value.reduce((m, g) => Math.max(m, g.utilization || 0), 0) || null)
+// 空闲卡计数去抖，避免抖动时徽章一闪一闪。 / Debounced free count to avoid flicker.
+const rawFreeCount = computed(() => gpus.value.filter(isFree).length)
+const freeCount = ref(rawFreeCount.value)
+let ft = null
+watch(rawFreeCount, (v) => { clearTimeout(ft); ft = setTimeout(() => { freeCount.value = v }, 12000) })
+onUnmounted(() => clearTimeout(ft))
 
-function lvlTxt(v, w, c) {
-  const l = level(v, w, c)
-  return l === 'crit' ? 'crit-txt' : l === 'warn' ? 'warn-txt' : ''
-}
+function lvl(v, w, c) { return level(v, w, c) }
 function go() { router.push('/host/' + encodeURIComponent(props.name)) }
 </script>

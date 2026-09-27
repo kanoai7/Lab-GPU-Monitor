@@ -12,7 +12,11 @@
     </nav>
   </header>
 
-  <router-view />
+  <router-view v-slot="{ Component }">
+    <transition name="fade" mode="out-in">
+      <component :is="Component" />
+    </transition>
+  </router-view>
 
   <div class="footer">Lab GPU Monitor · v2.0</div>
 </template>

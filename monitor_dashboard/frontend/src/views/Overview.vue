@@ -13,7 +13,7 @@
     <div v-else-if="!visibleNames.length" class="empty-hint">无匹配结果 / No matching hosts.</div>
 
     <div class="cards">
-      <HostCard v-for="n in visibleNames" :key="n" :name="n" :entry="servers[n]" :sparks="sparks[n] || {}" />
+      <HostCard v-for="n in visibleNames" :key="n" :name="n" :entry="servers[n]" />
     </div>
   </main>
 </template>
@@ -25,22 +25,13 @@ import { api } from '../api.js'
 import { isFree } from '../util.js'
 
 const servers = reactive({})
-const sparks = reactive({})     // name -> {cpu:[], gpu:[]}
 const filter = ref('')
 const freeOnly = ref(loadFreeOnly())
 const pollMs = ref(2000)
 const status = ref('syncing')
 let timer = null
 
-const RING = 30
 function loadFreeOnly() { try { return localStorage.getItem('lgm-free-only') === '1' } catch (e) { return false } }
-function pushRing(name, cpu, gpu) {
-  if (!sparks[name]) sparks[name] = { cpu: [], gpu: [] }
-  const s = sparks[name]
-  s.cpu.push(cpu); s.gpu.push(gpu)
-  if (s.cpu.length > RING) s.cpu.shift()
-  if (s.gpu.length > RING) s.gpu.shift()
-}
 
 const hasAgents = computed(() => Object.keys(servers).length > 0)
 const pillText = computed(() => status.value === 'ok' ? '已同步 / synced' : status.value === 'err' ? '连接失败 / error' : '同步中… / syncing…')
@@ -76,12 +67,6 @@ async function refresh() {
     for (const k of Object.keys(servers)) if (!(k in s)) delete servers[k]
     for (const [k, v] of Object.entries(s)) {
       servers[k] = v
-      if (v.status === 'online') {
-        const d = v.data || {}
-        const cpu = (d.cpu || {}).percent
-        const gpu = (d.gpus || []).reduce((m, g) => Math.max(m, g.utilization || 0), 0)
-        pushRing(k, typeof cpu === 'number' ? cpu : null, typeof gpu === 'number' ? gpu : null)
-      }
     }
     if (res.config && res.config.poll_interval) pollMs.value = Math.max(1000, res.config.poll_interval * 1000)
     status.value = 'ok'

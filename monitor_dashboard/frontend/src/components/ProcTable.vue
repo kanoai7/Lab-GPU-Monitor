@@ -7,7 +7,7 @@
         <span v-if="p.name"> · {{ p.name }}</span>
         · {{ memGB(p) }}
         <span v-if="typeof p.gpu_util === 'number'"> · GPU {{ p.gpu_util }}%</span>
-        <span v-if="idle(p)" class="flag" style="border:1px solid var(--warn);color:var(--warn)">空转 / idle?</span>
+        <span v-if="idle(p)" class="badge warn" style="margin-left:6px">空转 / idle?</span>
       </div>
       <div class="cwd" :title="p.cmdline || ''">{{ p.cwd || '—' }}</div>
     </div>

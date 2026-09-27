@@ -2,7 +2,7 @@
   <main class="container settings">
     <div class="page-head"><h1>设置 / Settings</h1></div>
 
-    <div class="panel">
+    <div class="panel pad">
       <h2>通用 / General</h2>
       <div class="row"><span>站点名称 / Site title</span><input class="field" v-model="cfg.title" /></div>
       <div class="row"><span>后台轮询间隔（秒）/ Poll interval (s)</span>
@@ -11,7 +11,7 @@
         <input class="field" type="number" v-model.number="cfg.port" /></div>
     </div>
 
-    <div class="panel">
+    <div class="panel pad">
       <h2>监控源 / Agents</h2>
       <div class="agent-row" v-for="(a, i) in agentList" :key="i">
         <input class="field" placeholder="名称 / name" v-model="a.name" />
@@ -22,34 +22,34 @@
       <button class="btn" @click="agentList.push({ name: '', host: '', port: 9527 })">+ 添加 Agent / Add</button>
     </div>
 
-    <div class="panel">
+    <div class="panel pad">
       <h2>外观 / Appearance</h2>
       <div class="row"><span>默认主题 / Default theme</span>
         <select class="field" v-model="cfg.theme"><option value="dark">暗色 / dark</option><option value="light">浅色 / light</option></select>
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel pad">
       <h2>告警阈值 / Alert thresholds</h2>
       <div class="row"><span>GPU 温度 / GPU temp (°C)</span><input class="field" type="number" v-model.number="cfg.alerts.gpu_temp" /></div>
       <div class="row"><span>GPU 显存 / GPU mem (%)</span><input class="field" type="number" v-model.number="cfg.alerts.gpu_mem_percent" /></div>
       <div class="row"><span>磁盘 / Disk (%)</span><input class="field" type="number" v-model.number="cfg.alerts.disk_percent" /></div>
     </div>
 
-    <div class="panel">
+    <div class="panel pad">
       <h2>展示 / Display</h2>
       <label class="check"><input type="checkbox" v-model="cfg.display.show_processes" /> 显示进程 / show processes</label>
       <label class="check"><input type="checkbox" v-model="cfg.display.show_offline" /> 显示离线主机 / show offline hosts</label>
     </div>
 
-    <div class="panel">
+    <div class="panel pad">
       <h2>历史保留 / History retention</h2>
       <label class="check"><input type="checkbox" v-model="cfg.history.enabled" /> 记录历史 / record history</label>
       <div class="row"><span>原始保留（小时）/ raw hours</span><input class="field" type="number" min="1" v-model.number="cfg.history.retain_raw_hours" /></div>
       <div class="row"><span>降采样保留（天）/ rollup days</span><input class="field" type="number" min="1" v-model.number="cfg.history.retain_rollup_days" /></div>
     </div>
 
-    <div class="panel">
+    <div class="panel pad">
       <h2>安全 / Security</h2>
       <label class="check"><input type="checkbox" v-model="cfg.auth_enabled" /> 启用登录鉴权 / enable auth</label>
       <div class="row"><span>{{ cfg.has_password ? '修改密码 / change password' : '设置密码 / set password' }}</span>
