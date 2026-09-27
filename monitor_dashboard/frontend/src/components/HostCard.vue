@@ -13,26 +13,30 @@
     </div>
     <div class="card-body">
       <template v-if="online">
-        <!-- 主机级：CPU / 内存 / Host-level CPU + memory -->
-        <div class="metric">
-          <div class="metric-top">
-            <span>CPU<template v-if="loadCaption"> · {{ loadCaption }}</template></span>
-            <b class="mono">{{ int(cpuPct) }}%</b>
+        <!-- 主机级关键指标：CPU / 内存 汽车仪表盘 / host-level CPU + MEM as speedometer gauges -->
+        <div class="hc-stats">
+          <div class="hc-stat" :class="lvl(cpuPct, 70, 90)">
+            <Gauge :value="cpuPct" :warn="70" :crit="90" :size="112" on-panel2 />
+            <div class="hc-k">CPU</div>
+            <div v-if="loadCaption" class="hc-sub">{{ loadCaption }}</div>
           </div>
-          <div class="bar" :class="lvl(cpuPct, 70, 90)"><span :style="{ width: pct(cpuPct) + '%' }"></span></div>
-        </div>
-        <div class="metric">
-          <div class="metric-top">
-            <span>内存 / MEM</span>
-            <b class="mono">{{ num(mem.used_gb) }} / {{ num(mem.total_gb) }} GB · {{ int(mem.percent) }}%</b>
+          <div class="hc-stat" :class="lvl(mem.percent, 80, 95)">
+            <Gauge :value="mem.percent" :warn="80" :crit="95" :size="112" on-panel2 />
+            <div class="hc-k">内存 / MEM</div>
+            <div class="hc-sub mono">{{ num(mem.used_gb) }} / {{ num(mem.total_gb) }} GB</div>
           </div>
-          <div class="bar" :class="lvl(mem.percent, 80, 95)"><span :style="{ width: pct(mem.percent) + '%' }"></span></div>
         </div>
 
-        <!-- 每张 GPU 的完整信息（不做“最热”聚合）/ Full per-GPU info (no "hottest" aggregation). -->
-        <div v-if="gpus.length" class="gpu-list">
-          <GpuPanel v-for="g in gpus" :key="g.index" :g="g" :show-procs="false" compact />
-        </div>
+        <!-- 每张 GPU 的完整信息（不做"最热"聚合）/ Full per-GPU info (no "hottest" aggregation). -->
+        <template v-if="gpus.length">
+          <div class="section-cap">
+            <span>GPU</span>
+            <span class="sc-meta">{{ gpus.length }} 卡<template v-if="freeCount"> · 空闲 {{ freeCount }}</template></span>
+          </div>
+          <div class="gpu-list">
+            <GpuPanel v-for="g in gpus" :key="g.index" :g="g" :show-procs="false" compact />
+          </div>
+        </template>
         <div v-else class="inforow"><span class="lbl">GPU</span>未检测到 GPU / no GPU detected</div>
       </template>
       <template v-else>
@@ -46,7 +50,8 @@
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GpuPanel from './GpuPanel.vue'
-import { int, num, pct, level, isFree, loadPct } from '../util.js'
+import Gauge from './Gauge.vue'
+import { num, level, isFree, loadPct } from '../util.js'
 
 const props = defineProps({
   name: String,

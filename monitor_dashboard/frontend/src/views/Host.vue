@@ -23,10 +23,16 @@
         </div>
         <div class="panel-body">
           <div class="gauge-row">
-            <Ring :value="cpuPct" label="CPU" unit="%" :warn="70" :crit="90" :size="112" />
-            <Donut v-if="memSegs.length" :segments="memSegs" :size="128" :center-value="int(mem.percent) + '%'" center-label="内存" unit=" GB" />
+            <div class="gauge-cell">
+              <Gauge :value="cpuPct" label="CPU" :warn="70" :crit="90" :size="128" />
+              <div v-if="loadSub" class="gauge-sub">{{ loadSub }}</div>
+            </div>
+            <div class="gauge-cell">
+              <Gauge :value="mem.percent" label="内存" :warn="80" :crit="95" :size="128" />
+              <div class="gauge-sub mono">{{ num(mem.used_gb) }} / {{ num(mem.total_gb) }} GB</div>
+            </div>
             <div class="stat-row" style="flex:1; min-width:280px">
-              <StatCard k="负载 1m" :v="load1txt" :sub="loadSub" :level="loadLevel" />
+              <StatCard k="1 分钟负载" :v="load1txt" :sub="loadSub" :level="loadLevel" />
               <StatCard k="空闲 GPU" :v="freeCount + ' / ' + liveGpus.length" :level="freeCount ? 'ok' : ''" />
               <StatCard k="网络 ↑/↓ Mbps" :v="netNow" />
               <StatCard k="磁盘 R/W MB/s" :v="dioNow" />
@@ -48,7 +54,7 @@
             <StatCard k="物理核 / phys" :v="cpu.physical_cores ?? '—'" />
             <StatCard k="逻辑核 / logical" :v="cpu.logical_cores ?? '—'" />
             <StatCard k="频率 / freq" :v="cpu.freq_mhz ? int(cpu.freq_mhz) + ' MHz' : '—'" />
-            <StatCard k="负载 1/5/15" :v="loadAll" />
+            <StatCard k="负载 1/5/15 分钟" :v="loadAll" />
           </div>
           <div v-if="perCore.length" class="caption" style="margin:16px 0 6px">每核利用率 / per-core util</div>
           <div v-if="perCore.length" class="cores">
@@ -155,8 +161,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import MetricChart from '../components/MetricChart.vue'
 import GpuPanel from '../components/GpuPanel.vue'
-import Ring from '../components/Ring.vue'
-import Donut from '../components/Donut.vue'
+import Gauge from '../components/Gauge.vue'
 import BarGauge from '../components/BarGauge.vue'
 import StatCard from '../components/StatCard.vue'
 import { api } from '../api.js'
@@ -185,18 +190,6 @@ const liveGpus = computed(() => D.value.gpus || [])
 const perCore = computed(() => cpu.value.per_core || [])
 const cpuPct = computed(() => cpu.value.percent)
 const freeCount = computed(() => liveGpus.value.filter(isFree).length)
-// 内存构成饼环：已用 / 缓存·其他 / 可用 / memory composition donut.
-const memSegs = computed(() => {
-  const m = mem.value
-  if (typeof m.total_gb !== 'number') return []
-  const used = m.used_gb || 0, avail = m.available_gb || 0
-  const other = Math.max(0, m.total_gb - used - avail)
-  return [
-    { label: '已用 / used', value: used, color: 'var(--accent)' },
-    { label: '缓存/其他 / cache', value: other, color: 'var(--muted)' },
-    { label: '可用 / available', value: avail, color: 'var(--ok)' },
-  ]
-})
 
 // 负载归一化 / normalized load.
 const load = computed(() => cpu.value.load_avg)

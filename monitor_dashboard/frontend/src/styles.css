@@ -20,7 +20,7 @@
   /* 8px 间距栅格 / 8px spacing grid */
   --sp1: 4px; --sp2: 8px; --sp3: 12px; --sp4: 16px; --sp5: 24px; --sp6: 32px;
   --r1: 7px; --r2: 11px; --r3: 15px; --rp: 999px;
-  --fs-h1: 26px; --fs-h2: 18px; --fs-h3: 15px; --fs-body: 16px; --fs-cap: 12px;
+  --fs-h1: 30px; --fs-h2: 18px; --fs-h3: 15px; --fs-body: 16px; --fs-cap: 12px;
 }
 html[data-theme="light"] {
   --bg: #eef1f5; --panel: #ffffff; --panel-2: #f4f6f9; --panel-3: #e9edf2;
@@ -114,7 +114,7 @@ select.field { cursor: pointer; }
 .card.offline { opacity: .62; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2);
   padding: var(--sp3) var(--sp4); border-bottom: 1px solid var(--border); background: var(--panel-2); }
-.card-title { font-weight: 650; font-size: 15px; display: flex; align-items: center; gap: var(--sp2); min-width: 0; }
+.card-title { font-weight: 680; font-size: 16px; display: flex; align-items: center; gap: var(--sp2); min-width: 0; letter-spacing: -.01em; }
 .card-title .host { font-weight: 500; font-size: 11px; color: var(--muted); background: var(--muted-bg);
   padding: 2px 8px; border-radius: var(--rp); }
 .card-body { padding: var(--sp4); }
@@ -133,10 +133,12 @@ select.field { cursor: pointer; }
 .flag { font-size: 10px; font-weight: 700; border-radius: var(--rp); padding: 2px 8px; white-space: nowrap; }
 .flag.free { color: var(--ok); background: var(--ok-bg); }
 /* metric rows & bars */
-.metric { margin: var(--sp3) 0; }
+.metric { margin: var(--sp4) 0; }
+.metric:first-child { margin-top: var(--sp2); }
+/* 标签(次要)与数值(主要)拉开层级：标签 text-2、数值更大更重、等宽对齐。 / label secondary, value primary. */
 .metric-top { display: flex; justify-content: space-between; align-items: baseline;
-  font-size: 12px; color: var(--muted); margin-bottom: 6px; gap: var(--sp2); }
-.metric-top b { color: var(--text); font-weight: 650; }
+  font-size: 13px; color: var(--text-2); margin-bottom: 7px; gap: var(--sp2); font-weight: 500; }
+.metric-top b { color: var(--text); font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; }
 .bar { height: 8px; background: var(--track); border-radius: var(--rp); overflow: hidden; }
 .bar > span { display: block; height: 100%; background: var(--accent); border-radius: var(--rp);
   transition: width .55s cubic-bezier(.4, 0, .2, 1), background-color .4s ease; }
@@ -144,6 +146,37 @@ select.field { cursor: pointer; }
 .bar.warn > span { background: var(--warn); }
 .bar.crit > span { background: var(--crit); }
 .warn-txt { color: var(--warn); } .crit-txt { color: var(--crit); }
+
+/* 主机卡 hero 指标（CPU / 内存 汽车仪表盘）+ 分区小标题 / host-card gauge stats + section caption */
+.hc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp3); }
+.hc-stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r2);
+  padding: var(--sp4) var(--sp3) var(--sp3); display: flex; flex-direction: column;
+  align-items: center; text-align: center; gap: 8px; }
+.hc-stat .hc-k { font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 650; }
+.hc-stat .hc-sub { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+
+/* 汽车仪表盘弧形表：270° 弧、底部 90° 开口（纯 CSS conic）/ speedometer arc gauge (pure CSS conic) */
+@property --g-val { syntax: '<number>'; inherits: false; initial-value: 0; }
+.gauge { position: relative; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: conic-gradient(from 225deg,
+    var(--g-col, var(--accent)) calc(var(--g-val, 0) * 2.7deg),
+    var(--track) 0 270deg, transparent 270deg 360deg);
+  transition: --g-val .55s cubic-bezier(.4, 0, .2, 1); }
+.gauge::before { content: ''; position: absolute; inset: 15%; border-radius: 50%; background: var(--panel); }
+.gauge.on-2::before { background: var(--panel-2); }
+.gauge-inner { position: relative; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; line-height: 1.08; }
+.gauge-inner .gv { font-weight: 730; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.gauge-inner .gk { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+/* 读数随阈值同色（与弧同步）/ readout follows threshold color */
+.hc-stat.warn .gv { color: var(--warn); } .hc-stat.crit .gv { color: var(--crit); }
+
+/* 分区小标题（GPU 等）：大写微标 + 右侧计数 / section caption divider */
+.section-cap { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp2);
+  margin: var(--sp5) 0 var(--sp2); padding-bottom: var(--sp2); border-bottom: 1px solid var(--border);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
+.section-cap .sc-meta { letter-spacing: 0; text-transform: none; font-weight: 550; color: var(--text-2); }
 
 /* panel chrome（统一模块骨架）/ panel chrome */
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r3);
@@ -210,7 +243,9 @@ select.field { cursor: pointer; }
   text-align: center; line-height: 1.12; }
 .ring-inner .rv { font-weight: 720; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .ring-inner .rk { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
-.gauge-row { display: flex; align-items: center; gap: var(--sp4); flex-wrap: wrap; }
+.gauge-row { display: flex; align-items: flex-start; gap: var(--sp5); flex-wrap: wrap; }
+.gauge-cell { display: flex; flex-direction: column; align-items: center; gap: var(--sp2); }
+.gauge-sub { font-size: 12px; color: var(--muted); line-height: 1.3; text-align: center; }
 
 /* 多段饼环（内存构成等）/ multi-segment donut */
 .donut-wrap { display: flex; align-items: center; gap: var(--sp4); flex-wrap: wrap; }
@@ -244,7 +279,7 @@ select.field { cursor: pointer; }
   color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* gpu block */
-.gpu-list { margin-top: var(--sp3); padding-top: var(--sp1); border-top: 1px solid var(--border); }
+.gpu-list { margin-top: 0; }
 .gpu { border: 1px solid var(--border); border-radius: var(--r2); padding: var(--sp3) var(--sp3);
   margin: var(--sp2) 0; background: var(--panel-2);
   transition: background-color .6s ease, border-color .6s ease; }
@@ -255,13 +290,15 @@ select.field { cursor: pointer; }
 .gpu-chips { display: flex; gap: 5px; flex-wrap: wrap; margin: var(--sp2) 0; }
 .gpu-extra { font-size: 11px; color: var(--muted); display: flex; gap: var(--sp3); flex-wrap: wrap; margin-top: 6px; }
 .gpu-extra b { color: var(--text-2); font-weight: 600; }
-/* 小卡「谁在用卡」列表：显存 + 用户 + cwd（原样，可换行）/ compact who's-using list */
-.gpu-cwds { margin-top: var(--sp2); display: flex; flex-direction: column; gap: 3px; }
-.cwd-row { display: flex; align-items: baseline; gap: 6px; font-size: 12px; line-height: 1.35; }
+/* 小卡「谁在用卡」列表：显存 + 用户一行，cwd 路径换到下一行 / compact who's-using: meta on line 1, cwd path wraps to line 2 */
+.gpu-cwds { margin-top: var(--sp2); display: flex; flex-direction: column; gap: 0; }
+.cwd-row { display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.35; padding: 5px 0; }
+.cwd-row + .cwd-row { border-top: 1px dashed var(--border); }
+.cwd-row .cwd-meta { display: flex; align-items: baseline; gap: 6px; }
 .cwd-row .cwd-mem { flex: none; color: var(--accent); font-weight: 600; }
 .cwd-row .cwd-user { flex: none; color: var(--muted); }
 .cwd-row .cwd-path { color: var(--text-2); word-break: break-all; }
-.gpu-cwds .cwd-idle { font-size: 12px; color: var(--muted); }
+.gpu-cwds .cwd-idle { font-size: 12px; color: var(--muted); padding: 5px 0; }
 /* process table */
 .procs { margin-top: var(--sp2); }
 .proc { font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: var(--muted);
@@ -293,9 +330,14 @@ select.field { cursor: pointer; }
 .seg button:hover:not(.active) { color: var(--text); background: var(--panel-3); }
 
 /* page head */
-.page-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3);
-  flex-wrap: wrap; margin-bottom: var(--sp4); }
-.page-head h1 { display: flex; align-items: center; gap: var(--sp2); flex-wrap: wrap; }
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp3);
+  flex-wrap: wrap; margin-bottom: var(--sp5); }
+.page-head h1 { display: flex; align-items: baseline; gap: var(--sp2); flex-wrap: wrap; }
+/* h1 后缀的英文副名，弱化处理，与主标题拉开层级。 / de-emphasized latin suffix after the h1. */
+.subtle { color: var(--muted); font-weight: 500; font-size: .62em; letter-spacing: 0; }
+.page-sub { color: var(--muted); font-size: 13.5px; font-weight: 450; margin-top: 6px;
+  font-variant-numeric: tabular-nums; }
+.page-head .filters { padding-top: 3px; }
 
 /* settings rows */
 .row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp3); margin: var(--sp3) 0; }

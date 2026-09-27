@@ -15,9 +15,11 @@
     <!-- 小卡：谁在用卡（cwd 原样）/ compact: who's using it (cwd as-is) -->
     <div v-if="compact" class="gpu-cwds">
       <div v-for="(c, i) in cwds" :key="i" class="cwd-row" :title="c.full">
-        <span v-if="c.mem" class="cwd-mem mono">{{ c.mem }}</span>
-        <span v-if="c.user" class="cwd-user">{{ c.user }}</span>
-        <span class="cwd-path mono">{{ c.path }}</span>
+        <div class="cwd-meta">
+          <span v-if="c.mem" class="cwd-mem mono">{{ c.mem }}</span>
+          <span v-if="c.user" class="cwd-user">{{ c.user }}</span>
+        </div>
+        <div class="cwd-path mono">{{ c.path }}</div>
       </div>
       <div v-if="!cwds.length" class="cwd-idle">空闲 · 无进程 / idle</div>
     </div>

@@ -1,9 +1,14 @@
 <template>
   <main class="container">
-    <div class="filters" style="margin-bottom:16px">
-      <input v-model="filter" class="field sm" type="text" placeholder="筛选：服务器 / 用户 / 目录 / GPU … / filter" />
-      <label class="chip"><input type="checkbox" v-model="freeOnly" /> 只看空闲卡 / free only</label>
-      <span class="pill" :class="pillClass">{{ pillText }}</span>
+    <div class="page-head">
+      <div>
+        <div class="page-sub">{{ summary }}</div>
+      </div>
+      <div class="filters">
+        <input v-model="filter" class="field sm" type="text" placeholder="筛选：服务器 / 用户 / 目录 / GPU … / filter" />
+        <label class="chip"><input type="checkbox" v-model="freeOnly" /> 只看空闲卡 / free only</label>
+        <span class="pill" :class="pillClass">{{ pillText }}</span>
+      </div>
     </div>
 
     <div v-if="!hasAgents" class="empty-hint">
@@ -34,6 +39,22 @@ let timer = null
 function loadFreeOnly() { try { return localStorage.getItem('lgm-free-only') === '1' } catch (e) { return false } }
 
 const hasAgents = computed(() => Object.keys(servers).length > 0)
+// 顶部概要：在线/离线台数 + 空闲卡数，给总览页一个主层级锚点。 / header summary as the page's top-level anchor.
+const summary = computed(() => {
+  const names = Object.keys(servers)
+  if (!names.length) return '等待 Agent 数据… / waiting for agents'
+  let on = 0, off = 0, free = 0, cards = 0
+  for (const n of names) {
+    const e = servers[n] || {}
+    if (e.status === 'online') {
+      on++
+      const gs = (e.data || {}).gpus || []
+      cards += gs.length
+      free += gs.filter(isFree).length
+    } else off++
+  }
+  return `${on} 台在线 · ${off} 台离线 · 空闲 ${free} / ${cards} 卡`
+})
 const pillText = computed(() => status.value === 'ok' ? '已同步 / synced' : status.value === 'err' ? '连接失败 / error' : '同步中… / syncing…')
 const pillClass = computed(() => status.value === 'ok' ? 'online' : status.value === 'err' ? 'offline' : '')
 
