@@ -36,7 +36,7 @@
         <span v-if="num0(g.power_percent) !== null">功耗占比 <b>{{ int(g.power_percent) }}%</b></span>
       </div>
 
-      <ProcTable v-if="showProcs && (g.processes || []).length" :procs="g.processes" />
+      <ProcTable v-if="showProcs && procs.length" :procs="procs" />
     </template>
   </div>
 </template>
@@ -45,7 +45,7 @@
 import { computed, ref, watch, onUnmounted } from 'vue'
 import ProcTable from './ProcTable.vue'
 import BarGauge from './BarGauge.vue'
-import { int, level, isFree, gbFromMb } from '../util.js'
+import { int, level, isFree, gbFromMb, realGpuProcs, cleanStr } from '../util.js'
 
 const props = defineProps({
   g: { type: Object, default: () => ({}) },
@@ -77,13 +77,14 @@ const bars = computed(() => {
     vram,
   ]
 })
-// 小卡：显存条下列出「谁在用卡」——以 cwd 为身份，原样展示（[[proc-cwd-identity]]）。
-// Compact card: under the VRAM bar, list who's using the GPU — identity = cwd, shown as-is.
-const cwds = computed(() => (props.g.processes || []).map((p) => ({
-  path: p.cwd || p.name || '—',
-  full: p.cmdline || p.cwd || '',
+// 小卡：显存条下列出「谁在用卡」——以 cwd 为身份，原样展示（[[proc-cwd-identity]]）。剔除 Xorg 等系统进程。
+// Compact card: under the VRAM bar, list who's using the GPU — identity = cwd, shown as-is. System procs (Xorg…) filtered.
+const procs = computed(() => realGpuProcs(props.g.processes))
+const cwds = computed(() => procs.value.map((p) => ({
+  path: cleanStr(p.cwd) || cleanStr(p.name) || '—',
+  full: cleanStr(p.cmdline) || cleanStr(p.cwd) || '',
   mem: memShort(p.gpu_memory_usage_mb),
-  user: p.username || '',
+  user: cleanStr(p.username) || '',
 })))
 function memShort(mb) {
   if (typeof mb !== 'number') return ''

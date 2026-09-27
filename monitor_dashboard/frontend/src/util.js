@@ -71,3 +71,21 @@ export function fmtBytes(gb) {
 export function gbFromMb(mb, d = 1) {
   return (typeof mb === 'number' && isFinite(mb)) ? (mb / 1024).toFixed(d) : '—'
 }
+
+// 归一化 agent 字段：取不到权限时 agent 会填字符串 "unknown"，一律当作缺失，返回 null。
+// Normalize an agent-provided string field: the agent fills "unknown" when it lacks permission; treat it (and empty) as missing.
+export function cleanStr(v) {
+  if (typeof v !== 'string') return null
+  const s = v.trim()
+  return (s && s.toLowerCase() !== 'unknown') ? s : null
+}
+
+// 显示服务器 / 桌面进程：占少量显存但不是 GPU 工作负载，不算"谁在用卡"，从进程列表剔除。
+// Display-server / desktop processes: they hold a little VRAM but aren't GPU workloads, so drop them from the process list.
+const SYSTEM_PROC_NAMES = /^(xorg|xwayland|x|gnome-shell|gdm|kwin_x11|kwin_wayland|plasmashell)$/i
+export function isSystemProc(p) {
+  return SYSTEM_PROC_NAMES.test(String((p && p.name) || '').trim())
+}
+export function realGpuProcs(list) {
+  return (list || []).filter((p) => !isSystemProc(p))
+}

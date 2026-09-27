@@ -3,19 +3,21 @@
     <div class="proc" v-for="p in procs" :key="p.pid">
       <div>
         <b>PID {{ p.pid }}</b>
-        <span v-if="p.username"> · {{ p.username }}</span>
-        <span v-if="p.name"> · {{ p.name }}</span>
+        <span v-if="val(p.username)"> · {{ val(p.username) }}</span>
+        <span v-if="val(p.name)"> · {{ val(p.name) }}</span>
         · {{ memGB(p) }}
         <span v-if="typeof p.gpu_util === 'number'"> · GPU {{ p.gpu_util }}%</span>
         <span v-if="idle(p)" class="badge warn" style="margin-left:6px">空转 / idle?</span>
       </div>
-      <div class="cwd" :title="p.cmdline || ''">{{ p.cwd || '—' }}</div>
+      <div class="cwd" :title="val(p.cmdline) || ''">{{ val(p.cwd) || '—' }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { cleanStr as val } from '../util.js'
 defineProps({ procs: { type: Array, default: () => [] } })
+// val()：把 agent 的 "unknown"/空归一化为缺失（→ 省略或显示 —）。见 util.cleanStr。
 // 显存占用：MB→GB 展示。 / VRAM usage MB->GB.
 function memGB(p) {
   const mb = p.gpu_memory_usage_mb

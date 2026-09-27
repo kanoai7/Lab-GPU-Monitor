@@ -186,9 +186,16 @@ def get_gpu_metrics():
                         try:
                             ps_proc = psutil.Process(pid)
                             with ps_proc.oneshot(): # 进一步优化瞬间的读取性能 / Further optimize instantaneous read performance
-                                proc_data["cwd"] = ps_proc.cwd()
-                                create_time = datetime.datetime.fromtimestamp(ps_proc.create_time())
-                                proc_data["create_time"] = create_time.isoformat()
+                                # cwd 在多用户机上常因权限被拒；单独 try，避免它抛异常时阻断后面的 username/name/cmdline。/ cwd is often permission-denied on multi-user hosts; isolate it so its failure doesn't skip the fields below.
+                                try:
+                                    proc_data["cwd"] = ps_proc.cwd()
+                                except Exception:
+                                    pass
+                                try:
+                                    create_time = datetime.datetime.fromtimestamp(ps_proc.create_time())
+                                    proc_data["create_time"] = create_time.isoformat()
+                                except Exception:
+                                    pass
                                 # 新增：进程归属人 / 名称 / 命令行（均为 PID 生命周期内不变的信息，可安全缓存） / New: process owner / name / cmdline (all constant over a PID's lifetime, safe to cache)
                                 try:
                                     proc_data["username"] = ps_proc.username()
