@@ -5,8 +5,8 @@
         <span v-if="free" class="flag free">空闲 / FREE</span>
       </span>
       <span class="head-badges">
-        <span v-if="!compact" class="badge" :class="tempCls">{{ int(g.temperature) }}°C</span>
-        <span v-if="!compact" class="badge">{{ int(g.power_draw) }} / {{ int(g.power_limit) }} W</span>
+        <span v-if="!compact" class="badge" :class="tempCls"><Icon name="thermometer" :size="12" />{{ int(g.temperature) }}°C</span>
+        <span v-if="!compact" class="badge"><Icon name="zap" :size="12" />{{ int(g.power_draw) }} / {{ int(g.power_limit) }} W</span>
       </span>
     </div>
 
@@ -47,6 +47,7 @@
 import { computed, ref, watch, onUnmounted } from 'vue'
 import ProcTable from './ProcTable.vue'
 import BarGauge from './BarGauge.vue'
+import Icon from './Icon.vue'
 import { int, level, isFree, gbFromMb, realGpuProcs, cleanStr } from '../util.js'
 
 const props = defineProps({

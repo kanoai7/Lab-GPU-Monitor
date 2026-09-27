@@ -17,7 +17,7 @@
         <input class="field" placeholder="名称 / name" v-model="a.name" />
         <input class="field" placeholder="主机 / host" v-model="a.host" />
         <input class="field port" placeholder="端口" type="number" v-model.number="a.port" />
-        <button class="btn btn-del" title="删除 / remove" @click="agentList.splice(i, 1)">✕</button>
+        <button class="btn btn-del" title="删除 / remove" @click="agentList.splice(i, 1)"><Icon name="close" :size="14" /></button>
       </div>
       <button class="btn" @click="agentList.push({ name: '', host: '', port: 9527 })">+ 添加 Agent / Add</button>
     </div>
@@ -69,6 +69,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { api } from '../api.js'
+import Icon from '../components/Icon.vue'
 
 const cfg = reactive({
   title: '', port: 48080, poll_interval: 2, theme: 'dark',

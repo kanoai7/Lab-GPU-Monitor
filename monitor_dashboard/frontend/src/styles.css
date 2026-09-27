@@ -73,18 +73,25 @@ h3 { font-size: var(--fs-h3); font-weight: 600; margin: 0; }
   position: sticky; top: 0; z-index: 20; flex-wrap: wrap;
 }
 .brand { display: flex; align-items: center; gap: var(--sp2); font-weight: 700; font-size: 15px; }
-.brand-mark { color: var(--accent); font-size: 15px; }
+/* 品牌标记：圆角方块承托芯片图标，SaaS app-icon 观感。 / Brand mark: rounded badge holding the chip icon. */
+.brand-mark { display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px; color: var(--accent-fg);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 92%, #fff) 0%, var(--accent) 60%, color-mix(in srgb, var(--accent) 80%, #000) 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.18); }
 .topnav { display: flex; align-items: center; gap: var(--sp2); flex-wrap: wrap; }
-.navlink { color: var(--muted); font-weight: 550; cursor: pointer; padding: 6px 10px;
-  border-radius: var(--r1); position: relative; }
+.navlink { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 550;
+  cursor: pointer; padding: 6px 10px; border-radius: var(--r1); position: relative; }
+.navlink > .icon { opacity: .85; }
 .navlink:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
 .navlink.active { color: var(--text); background: var(--accent-bg); }
+.navlink.active > .icon { opacity: 1; color: var(--accent); }
 .icon-btn {
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
-  border-radius: var(--r1); cursor: pointer; padding: 6px 10px; font-size: 14px; line-height: 1;
-  transition: border-color .15s, background .15s;
+  border-radius: var(--r1); cursor: pointer; padding: 6px 9px; line-height: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: border-color .15s, background .15s, color .15s;
 }
-.icon-btn:hover { background: var(--panel-3); border-color: var(--border-strong); }
+.icon-btn:hover { background: var(--panel-3); border-color: var(--border-strong); color: var(--accent); }
 .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted);
   border: 1px solid var(--border); border-radius: var(--rp); padding: 4px 11px;
   background: var(--panel-2); white-space: nowrap; font-weight: 550; }
@@ -128,8 +135,10 @@ select.field { cursor: pointer; }
 .head-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 
 /* badges / chips 叠底 / tinted badges */
-.badge { font-size: 11px; padding: 3px 9px; border-radius: var(--rp); border: 1px solid var(--border);
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 9px;
+  border-radius: var(--rp); border: 1px solid var(--border);
   color: var(--muted); white-space: nowrap; font-weight: 600; background: var(--panel-2); }
+.badge > .icon { opacity: .9; }
 .badge.crit { color: var(--crit); border-color: transparent; background: var(--crit-bg); }
 .badge.warn { color: var(--warn); border-color: transparent; background: var(--warn-bg); }
 .badge.ok-badge { color: var(--ok); border-color: transparent; background: var(--ok-bg); }
@@ -156,8 +165,9 @@ select.field { cursor: pointer; }
 .hc-stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r2);
   padding: var(--sp4) var(--sp3) var(--sp3); display: flex; flex-direction: column;
   align-items: center; text-align: center; gap: 8px; }
-.hc-stat .hc-k { font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--muted); font-weight: 650; }
+.hc-stat .hc-k { display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 650; }
+.hc-stat .hc-k > .icon { opacity: .8; }
 .hc-stat .hc-sub { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
 
 /* 汽车仪表盘弧形表：270° 弧、底部 90° 开口（纯 CSS conic）/ speedometer arc gauge (pure CSS conic) */
@@ -177,9 +187,11 @@ select.field { cursor: pointer; }
 .hc-stat.warn .gv { color: var(--warn); } .hc-stat.crit .gv { color: var(--crit); }
 
 /* 分区小标题（GPU 等）：大写微标 + 右侧计数 / section caption divider */
-.section-cap { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp2);
+.section-cap { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2);
   margin: var(--sp5) 0 var(--sp2); padding-bottom: var(--sp2); border-bottom: 1px solid var(--border);
   font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
+.section-cap .sc-title { display: inline-flex; align-items: center; gap: 5px; }
+.section-cap .sc-title > .icon { color: var(--c-gpu); opacity: .95; }
 .section-cap .sc-meta { letter-spacing: 0; text-transform: none; font-weight: 550; color: var(--text-2); }
 
 /* panel chrome（统一模块骨架）/ panel chrome */
@@ -189,6 +201,7 @@ select.field { cursor: pointer; }
   padding: var(--sp3) var(--sp4); border-bottom: 1px solid var(--border); background: var(--panel-2); }
 .panel-head .ph-title { display: flex; align-items: center; gap: var(--sp2); font-size: var(--fs-h2);
   font-weight: 650; }
+.panel-head .ph-title > .ph-ic { color: var(--accent); opacity: .9; }
 .panel-head .ph-actions { display: flex; align-items: center; gap: var(--sp2); flex-wrap: wrap; }
 .panel-body { padding: var(--sp4); }
 /* 旧式内联 panel（设置页）保留兼容 / legacy inline panel padding for settings */
@@ -201,7 +214,8 @@ select.field { cursor: pointer; }
 .panel.dragging { opacity: .4; }
 .panel.drop-before { box-shadow: 0 -3px 0 0 var(--accent), var(--shadow); }
 .panel.drop-after { box-shadow: 0 3px 0 0 var(--accent), var(--shadow); }
-.drag-handle { cursor: grab; color: var(--muted); font-size: 15px; line-height: 1; padding: 0 2px;
+.drag-handle { display: inline-flex; align-items: center; cursor: grab; color: var(--muted);
+  line-height: 0; padding: 2px; margin-right: -2px;
   user-select: none; border-radius: var(--r1); transition: color .15s, background .15s; }
 .drag-handle:hover { color: var(--text); background: var(--panel-3); }
 .drag-handle:active { cursor: grabbing; }

@@ -2,7 +2,7 @@
   <main class="container">
     <div class="page-head">
       <h1>
-        <router-link to="/" class="navlink">← 总览</router-link>
+        <router-link to="/" class="navlink"><Icon name="arrow-left" :size="15" />总览</router-link>
         <span>{{ name }}</span>
         <span v-if="hostname" class="badge mono">{{ hostname }}</span>
       </h1>
@@ -18,7 +18,7 @@
       <div class="panel" v-if="online" :style="{ order: ord('overview') }" :class="{ dragging: dragKey === 'overview' }"
            @dragover="onDragOver('overview', $event)" @drop.prevent="onDrop">
         <div class="panel-head">
-          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('overview', $event)" @dragend="onDragEnd">⠿</span> 概览 / Overview</span>
+          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('overview', $event)" @dragend="onDragEnd"><Icon name="grip" :size="16" /></span><Icon name="grid" :size="16" class="ph-ic" /> 概览 / Overview</span>
           <span class="caption">{{ sysLine }}</span>
         </div>
         <div class="panel-body">
@@ -47,7 +47,7 @@
       <div class="panel" v-if="online && cpu.percent != null" :style="{ order: ord('cpu') }" :class="{ dragging: dragKey === 'cpu' }"
            @dragover="onDragOver('cpu', $event)" @drop.prevent="onDrop">
         <div class="panel-head">
-          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('cpu', $event)" @dragend="onDragEnd">⠿</span> CPU</span>
+          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('cpu', $event)" @dragend="onDragEnd"><Icon name="grip" :size="16" /></span><Icon name="cpu" :size="16" class="ph-ic" /> CPU</span>
         </div>
         <div class="panel-body">
           <div class="stat-row">
@@ -69,7 +69,7 @@
       <div class="panel" v-if="online && disks.length" :style="{ order: ord('storage') }" :class="{ dragging: dragKey === 'storage' }"
            @dragover="onDragOver('storage', $event)" @drop.prevent="onDrop">
         <div class="panel-head">
-          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('storage', $event)" @dragend="onDragEnd">⠿</span> 存储 / Storage</span>
+          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('storage', $event)" @dragend="onDragEnd"><Icon name="grip" :size="16" /></span><Icon name="disk" :size="16" class="ph-ic" /> 存储 / Storage</span>
         </div>
         <div class="panel-body"><BarGauge :items="diskItems" /></div>
       </div>
@@ -78,7 +78,7 @@
       <div class="panel" v-if="online && net.send_mbps != null" :style="{ order: ord('network') }" :class="{ dragging: dragKey === 'network' }"
            @dragover="onDragOver('network', $event)" @drop.prevent="onDrop">
         <div class="panel-head">
-          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('network', $event)" @dragend="onDragEnd">⠿</span> 网络 / Network</span>
+          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('network', $event)" @dragend="onDragEnd"><Icon name="grip" :size="16" /></span><Icon name="network" :size="16" class="ph-ic" /> 网络 / Network</span>
           <span class="badge" :class="errDrop ? 'crit' : 'ok-badge'">{{ errDrop ? ('错误/丢包 ' + errDrop) : '无错误 / clean' }}</span>
         </div>
         <div class="panel-body">
@@ -104,7 +104,7 @@
       <div class="panel" v-if="online && dio.read_mbps != null" :style="{ order: ord('diskio') }" :class="{ dragging: dragKey === 'diskio' }"
            @dragover="onDragOver('diskio', $event)" @drop.prevent="onDrop">
         <div class="panel-head">
-          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('diskio', $event)" @dragend="onDragEnd">⠿</span> 磁盘 IO / Disk IO</span>
+          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('diskio', $event)" @dragend="onDragEnd"><Icon name="grip" :size="16" /></span><Icon name="activity" :size="16" class="ph-ic" /> 磁盘 IO / Disk IO</span>
         </div>
         <div class="panel-body">
           <div class="stat-row">
@@ -120,7 +120,7 @@
       <div class="panel" :style="{ order: ord('history') }" :class="{ dragging: dragKey === 'history' }"
            @dragover="onDragOver('history', $event)" @drop.prevent="onDrop">
         <div class="panel-head">
-          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('history', $event)" @dragend="onDragEnd">⠿</span> 历史趋势 / History</span>
+          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('history', $event)" @dragend="onDragEnd"><Icon name="grip" :size="16" /></span><Icon name="chart" :size="16" class="ph-ic" /> 历史趋势 / History</span>
           <div class="ph-actions">
             <div class="seg">
               <button v-for="r in RANGES" :key="r" :class="{ active: range === r }" @click="setRange(r)">{{ r }}</button>
@@ -146,7 +146,7 @@
       <div class="panel" v-if="online" :style="{ order: ord('gpu') }" :class="{ dragging: dragKey === 'gpu' }"
            @dragover="onDragOver('gpu', $event)" @drop.prevent="onDrop">
         <div class="panel-head">
-          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('gpu', $event)" @dragend="onDragEnd">⠿</span> 实时 GPU / Live GPUs</span>
+          <span class="ph-title"><span class="drag-handle" draggable="true" title="拖动排序 / drag to reorder" @dragstart="onDragStart('gpu', $event)" @dragend="onDragEnd"><Icon name="grip" :size="16" /></span><Icon name="gpu" :size="16" class="ph-ic" /> 实时 GPU / Live GPUs</span>
         </div>
         <div class="panel-body">
           <GpuPanel v-for="g in liveGpus" :key="g.index" :g="g" />
@@ -164,6 +164,7 @@ import GpuPanel from '../components/GpuPanel.vue'
 import Gauge from '../components/Gauge.vue'
 import BarGauge from '../components/BarGauge.vue'
 import StatCard from '../components/StatCard.vue'
+import Icon from '../components/Icon.vue'
 import { api } from '../api.js'
 import { int, num, pct, level, metricColor, isFree, loadPct } from '../util.js'
 

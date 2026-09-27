@@ -8,7 +8,7 @@
       </div>
       <div class="head-badges">
         <span v-if="online && freeCount" class="badge ok-badge">空闲 {{ freeCount }} / {{ gpus.length }} 卡</span>
-        <span class="badge" :class="online ? 'ok-badge' : 'crit'">{{ online ? '在线' : '离线' }}</span>
+        <span class="badge" :class="online ? 'ok-badge' : 'crit'"><Icon :name="online ? 'check' : 'close'" :size="12" />{{ online ? '在线' : '离线' }}</span>
       </div>
     </div>
     <div class="card-body">
@@ -17,12 +17,12 @@
         <div class="hc-stats">
           <div class="hc-stat" :class="lvl(cpuPct, 70, 90)">
             <Gauge :value="cpuPct" :warn="70" :crit="90" :size="128" color="var(--c-cpu)" on-panel2 />
-            <div class="hc-k">CPU</div>
+            <div class="hc-k"><Icon name="cpu" :size="13" />CPU</div>
             <div v-if="loadCaption" class="hc-sub">{{ loadCaption }}</div>
           </div>
           <div class="hc-stat" :class="lvl(mem.percent, 80, 95)">
             <Gauge :value="mem.percent" :warn="80" :crit="95" :size="128" color="var(--c-mem)" on-panel2 />
-            <div class="hc-k">内存 / MEM</div>
+            <div class="hc-k"><Icon name="memory" :size="13" />内存 / MEM</div>
             <div class="hc-sub mono">{{ num(mem.used_gb) }} / {{ num(mem.total_gb) }} GB</div>
           </div>
         </div>
@@ -30,7 +30,7 @@
         <!-- 每张 GPU 的完整信息（不做"最热"聚合）/ Full per-GPU info (no "hottest" aggregation). -->
         <template v-if="gpus.length">
           <div class="section-cap">
-            <span>GPU</span>
+            <span class="sc-title"><Icon name="gpu" :size="14" />GPU</span>
             <span class="sc-meta">{{ gpus.length }} 卡<template v-if="freeCount"> · 空闲 {{ freeCount }}</template></span>
           </div>
           <div class="gpu-list">
@@ -51,6 +51,7 @@ import { computed, ref, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GpuPanel from './GpuPanel.vue'
 import Gauge from './Gauge.vue'
+import Icon from './Icon.vue'
 import { num, level, isFree, loadPct } from '../util.js'
 
 const props = defineProps({

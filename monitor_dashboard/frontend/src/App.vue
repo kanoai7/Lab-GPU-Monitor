@@ -1,14 +1,16 @@
 <template>
   <header class="topbar">
     <div class="brand">
-      <span class="brand-mark">◆</span>
+      <span class="brand-mark"><Icon name="logo" :size="20" /></span>
       <span class="brand-name">{{ title }}</span>
     </div>
     <nav class="topnav">
-      <router-link class="navlink" :class="{ active: $route.name === 'overview' }" to="/">总览 / Overview</router-link>
-      <router-link class="navlink" :class="{ active: $route.name === 'settings' }" to="/settings">⚙ 设置 / Settings</router-link>
-      <a v-if="authOn" class="navlink" href="/logout">登出 / Logout</a>
-      <button class="icon-btn" title="切换主题 / Toggle theme" @click="toggleTheme">🌓</button>
+      <router-link class="navlink" :class="{ active: $route.name === 'overview' }" to="/"><Icon name="grid" :size="16" /><span>总览 / Overview</span></router-link>
+      <router-link class="navlink" :class="{ active: $route.name === 'settings' }" to="/settings"><Icon name="settings" :size="16" /><span>设置 / Settings</span></router-link>
+      <a v-if="authOn" class="navlink" href="/logout"><Icon name="logout" :size="16" /><span>登出 / Logout</span></a>
+      <button class="icon-btn" :title="themeName === 'dark' ? '切换到亮色 / Switch to light' : '切换到暗色 / Switch to dark'" @click="toggleTheme">
+        <Icon :name="themeName === 'dark' ? 'sun' : 'moon'" :size="18" />
+      </button>
     </nav>
   </header>
 
@@ -25,6 +27,7 @@
 import { ref, watchEffect, onMounted } from 'vue'
 import { themeName, toggleTheme } from './theme.js'
 import { api } from './api.js'
+import Icon from './components/Icon.vue'
 
 const title = ref('Lab GPU Monitor')
 const authOn = ref(false)
