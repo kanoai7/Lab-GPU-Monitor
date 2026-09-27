@@ -16,12 +16,12 @@
         <!-- 主机级关键指标：CPU / 内存 汽车仪表盘 / host-level CPU + MEM as speedometer gauges -->
         <div class="hc-stats">
           <div class="hc-stat" :class="lvl(cpuPct, 70, 90)">
-            <Gauge :value="cpuPct" :warn="70" :crit="90" :size="112" on-panel2 />
+            <Gauge :value="cpuPct" :warn="70" :crit="90" :size="128" color="var(--c-cpu)" on-panel2 />
             <div class="hc-k">CPU</div>
             <div v-if="loadCaption" class="hc-sub">{{ loadCaption }}</div>
           </div>
           <div class="hc-stat" :class="lvl(mem.percent, 80, 95)">
-            <Gauge :value="mem.percent" :warn="80" :crit="95" :size="112" on-panel2 />
+            <Gauge :value="mem.percent" :warn="80" :crit="95" :size="128" color="var(--c-mem)" on-panel2 />
             <div class="hc-k">内存 / MEM</div>
             <div class="hc-sub mono">{{ num(mem.used_gb) }} / {{ num(mem.total_gb) }} GB</div>
           </div>

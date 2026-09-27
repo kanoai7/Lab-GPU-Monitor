@@ -11,7 +11,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { lvlColor } from '../util.js'
+import { metricColor } from '../util.js'
 
 const props = defineProps({
   value: { type: Number, default: null },   // 原始值 / raw value
@@ -21,16 +21,13 @@ const props = defineProps({
   size: { type: Number, default: 104 },
   warn: { type: Number, default: null },
   crit: { type: Number, default: null },
-  color: { type: String, default: '' },      // 覆盖色 / override color
+  color: { type: String, default: '' },      // 指标底色 / metric base hue
   onPanel2: { type: Boolean, default: false },
 })
 
 const valid = computed(() => typeof props.value === 'number' && isFinite(props.value))
 const fillPct = computed(() => valid.value ? Math.max(0, Math.min(100, (props.value / props.max) * 100)) : 0)
 const display = computed(() => valid.value ? Math.round(props.value) + props.unit : '—')
-const color = computed(() => {
-  if (props.color) return props.color
-  if (props.warn != null && props.crit != null) return lvlColor(props.value, props.warn, props.crit)
-  return 'var(--accent)'
-})
+// 正常区间显示指标底色，越过 warn/crit 才转琥珀/红。 / Base hue normally; warn/crit escalate.
+const color = computed(() => metricColor(props.value, props.warn, props.crit, props.color || 'var(--accent)'))
 </script>

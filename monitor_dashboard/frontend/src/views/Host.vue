@@ -24,11 +24,11 @@
         <div class="panel-body">
           <div class="gauge-row">
             <div class="gauge-cell">
-              <Gauge :value="cpuPct" label="CPU" :warn="70" :crit="90" :size="128" />
+              <Gauge :value="cpuPct" label="CPU" :warn="70" :crit="90" :size="128" color="var(--c-cpu)" />
               <div v-if="loadSub" class="gauge-sub">{{ loadSub }}</div>
             </div>
             <div class="gauge-cell">
-              <Gauge :value="mem.percent" label="内存" :warn="80" :crit="95" :size="128" />
+              <Gauge :value="mem.percent" label="内存" :warn="80" :crit="95" :size="128" color="var(--c-mem)" />
               <div class="gauge-sub mono">{{ num(mem.used_gb) }} / {{ num(mem.total_gb) }} GB</div>
             </div>
             <div class="stat-row" style="flex:1; min-width:280px">
@@ -165,7 +165,7 @@ import Gauge from '../components/Gauge.vue'
 import BarGauge from '../components/BarGauge.vue'
 import StatCard from '../components/StatCard.vue'
 import { api } from '../api.js'
-import { int, num, pct, level, lvlColor, isFree, loadPct } from '../util.js'
+import { int, num, pct, level, metricColor, isFree, loadPct } from '../util.js'
 
 const RANGES = ['1h', '6h', '24h', '7d']
 const route = useRoute()
@@ -225,9 +225,9 @@ const nics = computed(() => {
 const diskItems = computed(() => disks.value.filter((d) => !d.error).map((d) => ({
   label: (d.mountpoint || d.device || '') + (d.device && d.mountpoint ? '  (' + d.device + ')' : ''),
   pct: d.percent, text: num(d.used_gb) + ' / ' + num(d.total_gb) + ' GB · ' + int(d.percent) + '%',
-  warn: 80, crit: 95,
+  warn: 80, crit: 95, color: 'var(--c-disk)',
 })))
-function coreColor(c) { return lvlColor(c, 60, 90) }
+function coreColor(c) { return metricColor(c, 60, 90, 'var(--c-cpu)') }
 
 const netSeries = computed(() => [
   { name: '上行 / up', data: H.net_up },

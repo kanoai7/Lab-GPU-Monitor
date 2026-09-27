@@ -68,14 +68,15 @@ onUnmounted(() => clearTimeout(ft))
 
 const tempCls = computed(() => {
   const l = level(props.g.temperature, 75, 85)
-  return l === 'crit' ? 'crit' : l === 'warn' ? 'warn' : 'ok-badge'
+  // 正常温度用中性徽标，绿色只留给「空闲」。 / Normal temp stays neutral; green is reserved for "free".
+  return l === 'crit' ? 'crit' : l === 'warn' ? 'warn' : ''
 })
 const bars = computed(() => {
   const vram = { label: '显存 / VRAM', pct: props.g.memory_percent,
-    text: `${gbFromMb(props.g.memory_used)} / ${gbFromMb(props.g.memory_total)} GB`, warn: 80, crit: 95 }
+    text: `${gbFromMb(props.g.memory_used)} / ${gbFromMb(props.g.memory_total)} GB`, warn: 80, crit: 95, color: 'var(--c-vram)' }
   if (props.compact) return [vram]
   return [
-    { label: '利用率 / Util', pct: props.g.utilization, text: int(props.g.utilization) + '%', warn: 60, crit: 90 },
+    { label: '利用率 / Util', pct: props.g.utilization, text: int(props.g.utilization) + '%', warn: 60, crit: 90, color: 'var(--c-gpu)' },
     vram,
   ]
 })

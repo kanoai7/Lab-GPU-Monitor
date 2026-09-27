@@ -18,10 +18,21 @@ export function level(v, warn, crit) {
   return 'ok'
 }
 
-// 阈值对应的 CSS 颜色变量（用于环形/进度条/仪表盘着色）。 / Threshold -> CSS color var.
+// 阈值对应的 CSS 颜色变量（纯严重度：绿/黄/红）。 / Threshold -> severity color var.
 export function lvlColor(v, warn, crit) {
   const l = level(v, warn, crit)
   return l === 'crit' ? 'var(--crit)' : l === 'warn' ? 'var(--warn)' : l === 'ok' ? 'var(--ok)' : 'var(--muted)'
+}
+
+// 指标着色：正常区间用该指标的专属底色 base（CPU/内存/显存/GPU… 各不相同），
+// 仅当越过 warn/crit 才升级为琥珀/红。这样颜色同时表达「是什么指标」与「热不热」，而非整页同色。
+// Metric coloring: normal range uses the metric's own base hue; only warn/crit escalate to amber/red.
+export function metricColor(v, warn, crit, base) {
+  if (typeof v === 'number' && isFinite(v) && warn != null && crit != null) {
+    if (v >= crit) return 'var(--crit)'
+    if (v >= warn) return 'var(--warn)'
+  }
+  return base || 'var(--accent)'
 }
 
 // 读取 CSS 变量当前值（供 ECharts 等需要具体色值处使用）。 / Read a live CSS var value.

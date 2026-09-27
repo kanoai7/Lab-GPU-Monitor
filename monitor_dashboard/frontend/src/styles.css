@@ -9,6 +9,8 @@
   --border: #263041; --border-strong: #33465e;
   --accent: #4c8dff; --accent-fg: #fff;
   --ok: #3fb950; --warn: #d99a2b; --crit: #f8604f; --track: #232d3b;
+  /* 各指标专属底色（正常区间按「是什么指标」区分；越线才转 warn/crit）/ per-metric base hues */
+  --c-cpu: #7c8cff; --c-mem: #29c0a6; --c-gpu: #4c8dff; --c-vram: #c07bff; --c-disk: #e08a3c; --c-net: #33c0d6;
   /* 状态叠底（chips / 高亮背景）/ status tint backgrounds */
   --ok-bg: color-mix(in srgb, var(--ok) 16%, transparent);
   --warn-bg: color-mix(in srgb, var(--warn) 18%, transparent);
@@ -28,6 +30,7 @@ html[data-theme="light"] {
   --border: #dbe1e8; --border-strong: #c3ccd6;
   --accent: #2563eb; --accent-fg: #fff;
   --ok: #1a7f37; --warn: #9a6700; --crit: #cf222e; --track: #e7ebf0;
+  --c-cpu: #5b6ee0; --c-mem: #0d9488; --c-gpu: #2563eb; --c-vram: #9333ea; --c-disk: #c2680f; --c-net: #0e8faf;
   --ok-bg: color-mix(in srgb, var(--ok) 12%, transparent);
   --warn-bg: color-mix(in srgb, var(--warn) 14%, transparent);
   --crit-bg: color-mix(in srgb, var(--crit) 12%, transparent);
@@ -106,7 +109,8 @@ select.field { cursor: pointer; }
 .chip:hover { color: var(--text); border-color: var(--border-strong); }
 
 /* cards grid */
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: var(--sp4); }
+/* 卡片墙：宽屏 2 列（4 台即 2+2，避免 3+1 落单），窄屏自动降为 1 列。 / 2-up on desktop (4 hosts = 2+2), 1-up when narrow. */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: var(--sp5); }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r3);
   box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
 .card.clickable { cursor: pointer; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
@@ -281,9 +285,11 @@ select.field { cursor: pointer; }
 /* gpu block */
 .gpu-list { margin-top: 0; }
 .gpu { border: 1px solid var(--border); border-radius: var(--r2); padding: var(--sp3) var(--sp3);
-  margin: var(--sp2) 0; background: var(--panel-2);
+  margin: var(--sp2) 0; background: var(--panel-2); border-left: 3px solid var(--border);
   transition: background-color .6s ease, border-color .6s ease; }
-.gpu.free { border-color: color-mix(in srgb, var(--ok) 55%, var(--border)); background: var(--ok-bg); }
+/* 空闲卡：仅用左侧绿色描边点出，不再整块泛绿；绿色的「空闲 / FREE」徽标才是主要信号。
+   Free card: signalled by a green left border only — no full green wash; the green FREE flag carries it. */
+.gpu.free { border-left-color: var(--ok); border-color: color-mix(in srgb, var(--ok) 22%, var(--border)); }
 .gpu-name { font-size: 13px; font-weight: 650; display: flex; justify-content: space-between; gap: var(--sp2);
   align-items: center; flex-wrap: wrap; }
 .gpu-name .idx { color: var(--accent); }
