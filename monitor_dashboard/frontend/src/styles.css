@@ -318,6 +318,7 @@ select.field { cursor: pointer; }
 .cwd-row .cwd-mem { flex: none; color: var(--accent); font-weight: 600; }
 .cwd-row .cwd-user { flex: none; color: var(--muted); }
 .cwd-row .cwd-path { color: var(--text-2); word-break: break-all; }
+.cwd-row .cwd-path .cwd-start { color: var(--muted); white-space: nowrap; }
 .gpu-cwds .cwd-idle { font-size: 12px; color: var(--muted); padding: 5px 0; }
 /* process table */
 .procs { margin-top: var(--sp2); }
@@ -326,6 +327,7 @@ select.field { cursor: pointer; }
 .proc:first-child { border-top: 0; }
 .proc b { color: var(--text); }
 .proc .cwd { color: var(--text-2); word-break: break-all; margin-top: 3px; }
+.proc .cwd .proc-start { color: var(--muted); white-space: nowrap; }
 .spark { font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; line-height: 1;
   color: var(--accent); letter-spacing: 1px; word-break: break-all; }
 

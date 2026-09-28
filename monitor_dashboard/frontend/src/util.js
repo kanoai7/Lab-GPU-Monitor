@@ -91,6 +91,19 @@ export function cleanStr(v) {
   return (s && s.toLowerCase() !== 'unknown') ? s : null
 }
 
+// 进程启动时间：agent 以 ISO 字符串上报 create_time（无权限时为 "unknown"）。
+// 展示为紧凑的 MM-DD HH:MM（同 agent 本地时区）；无效/缺失返回 ''。
+// Process start time: agent reports create_time as an ISO string ("unknown" when denied).
+// Render as compact MM-DD HH:MM (agent-local time); '' when missing/invalid.
+export function fmtStart(iso) {
+  const s = cleanStr(iso)
+  if (!s) return ''
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return ''
+  const p = (n) => String(n).padStart(2, '0')
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
 // 显示服务器 / 桌面进程：占少量显存但不是 GPU 工作负载，不算"谁在用卡"，从进程列表剔除。
 // Display-server / desktop processes: they hold a little VRAM but aren't GPU workloads, so drop them from the process list.
 const SYSTEM_PROC_NAMES = /^(xorg|xwayland|x|gnome-shell|gdm|kwin_x11|kwin_wayland|plasmashell)$/i

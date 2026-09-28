@@ -19,7 +19,7 @@
           <span v-if="c.mem" class="cwd-mem mono">{{ c.mem }}</span>
           <span v-if="c.user" class="cwd-user">{{ c.user }}</span>
         </div>
-        <div class="cwd-path mono">{{ c.path }}</div>
+        <div class="cwd-path mono">{{ c.path }}<span v-if="c.start" class="cwd-start"> · 启动 {{ c.start }}</span></div>
       </div>
       <div v-if="!cwds.length" class="cwd-idle">空闲 · 无进程 / idle</div>
     </div>
@@ -48,7 +48,7 @@ import { computed, ref, watch, onUnmounted } from 'vue'
 import ProcTable from './ProcTable.vue'
 import BarGauge from './BarGauge.vue'
 import Icon from './Icon.vue'
-import { int, level, isFree, gbFromMb, realGpuProcs, cleanStr } from '../util.js'
+import { int, level, isFree, gbFromMb, realGpuProcs, cleanStr, fmtStart } from '../util.js'
 
 const props = defineProps({
   g: { type: Object, default: () => ({}) },
@@ -89,6 +89,7 @@ const cwds = computed(() => procs.value.map((p) => ({
   full: cleanStr(p.cmdline) || cleanStr(p.cwd) || '',
   mem: memShort(p.gpu_memory_usage_mb),
   user: cleanStr(p.username) || '',
+  start: fmtStart(p.create_time),
 })))
 function memShort(mb) {
   if (typeof mb !== 'number') return ''
