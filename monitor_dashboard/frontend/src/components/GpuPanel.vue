@@ -16,6 +16,7 @@
     <div v-if="compact" class="gpu-cwds">
       <div v-for="(c, i) in cwds" :key="i" class="cwd-row" :title="c.full">
         <div class="cwd-meta">
+          <span v-if="c.pid != null" class="cwd-pid mono">PID {{ c.pid }}</span>
           <span v-if="c.mem" class="cwd-mem mono">{{ c.mem }}</span>
           <span v-if="c.user" class="cwd-user">{{ c.user }}</span>
         </div>
@@ -87,6 +88,7 @@ const procs = computed(() => realGpuProcs(props.g.processes))
 const cwds = computed(() => procs.value.map((p) => ({
   path: cleanStr(p.cwd) || cleanStr(p.name) || '—',
   full: cleanStr(p.cmdline) || cleanStr(p.cwd) || '',
+  pid: (typeof p.pid === 'number' || typeof p.pid === 'string') ? p.pid : null,
   mem: memShort(p.gpu_memory_usage_mb),
   user: cleanStr(p.username) || '',
   start: fmtStart(p.create_time),

@@ -315,6 +315,8 @@ select.field { cursor: pointer; }
 .cwd-row { display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.35; padding: 5px 0; }
 .cwd-row + .cwd-row { border-top: 1px dashed var(--border); }
 .cwd-row .cwd-meta { display: flex; align-items: baseline; gap: 6px; }
+.cwd-row .cwd-pid { flex: none; font-size: 11px; font-weight: 600; color: var(--muted);
+  background: var(--muted-bg); border-radius: 5px; padding: 1px 6px; align-self: center; }
 .cwd-row .cwd-mem { flex: none; color: var(--accent); font-weight: 600; }
 .cwd-row .cwd-user { flex: none; color: var(--muted); }
 .cwd-row .cwd-path { color: var(--text-2); word-break: break-all; }
